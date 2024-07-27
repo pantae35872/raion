@@ -1,4 +1,6 @@
-use crate::memory::Memory;
+use crate::memory::{address::Address, Memory};
+
+pub mod registers;
 
 pub struct Executor<'a> {
     memory: &'a mut Memory,
@@ -10,6 +12,6 @@ impl<'a> Executor<'a> {
     }
 
     pub fn tick(&mut self) {
-        let a = self.memory.mem_get(0);
+        let a = self.memory.mem_get(Address::new(0));
     }
 }
