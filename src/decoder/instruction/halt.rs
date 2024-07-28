@@ -1,15 +1,15 @@
 use crate::{decoder::argument::Argument, executor::registers::RegisterFile, memory::Memory};
 
-use super::{Instruction, MOV_OPCODE};
+use super::Instruction;
 
-pub struct Mov<'a, 'b> {
+pub struct Halt<'a, 'b> {
     register: &'a mut RegisterFile,
     memory: &'b mut Memory,
     argument: Argument<'b>,
     instruction_length: usize,
 }
 
-impl<'a, 'b> Mov<'a, 'b> {
+impl<'a, 'b> Halt<'a, 'b> {
     pub fn new(
         register: &'a mut RegisterFile,
         memory: &'b mut Memory,
@@ -25,24 +25,10 @@ impl<'a, 'b> Mov<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Instruction for Mov<'a, 'b> {
+impl<'a, 'b> Instruction for Halt<'a, 'b> {
     fn execute(&mut self) -> Result<(), super::InstructionError> {
         self.register.inc_ip(self.instruction_length);
-        match self.argument.parse_u8()? {
-            1 => {
-                self.register.set_general(
-                    &self.argument.parse_register()?,
-                    self.register
-                        .get_general(&self.argument.parse_register()?)?,
-                )?;
-            }
-            invalid_subop_code => {
-                return Err(super::InstructionError::InvalidSubOpCode(
-                    MOV_OPCODE,
-                    invalid_subop_code,
-                ))
-            }
-        };
+        self.register.set_halt(true);
         return Ok(());
     }
 }

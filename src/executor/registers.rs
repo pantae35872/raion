@@ -2,7 +2,7 @@ use std::{error::Error, fmt::Display};
 
 use crate::memory::address::Address;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Registers {
     A8,
     A16,
@@ -111,6 +111,7 @@ pub struct RegisterFile {
     c: u64,
     d: u64,
     ip: Address,
+    halt: bool,
 }
 
 #[derive(Debug)]
@@ -146,7 +147,16 @@ impl RegisterFile {
             c: 0,
             d: 0,
             ip: Address::new(0x0),
+            halt: false,
         }
+    }
+
+    pub fn set_halt(&mut self, data: bool) {
+        self.halt = data;
+    }
+
+    pub fn get_halt(&self) -> bool {
+        return self.halt;
     }
 
     pub fn set_ip(&mut self, data: Address) {
@@ -164,38 +174,42 @@ impl RegisterFile {
         return inc_ip;
     }
 
-    pub fn set_general(&mut self, register: Registers, data: u64) -> Result<(), RegisterFileError> {
+    pub fn set_general(
+        &mut self,
+        register: &Registers,
+        data: u64,
+    ) -> Result<(), RegisterFileError> {
         match register {
             Registers::A8 | Registers::B8 | Registers::C8 | Registers::D8 => {
                 match <u8>::try_from(data) {
                     Ok(_) => unsafe { self.set(register, data) },
-                    Err(_) => return Err(RegisterFileError::SetError(register, data)),
+                    Err(_) => return Err(RegisterFileError::SetError(register.clone(), data)),
                 }
             }
             Registers::A16 | Registers::B16 | Registers::C16 | Registers::D16 => {
                 match <u16>::try_from(data) {
                     Ok(_) => unsafe { self.set(register, data) },
-                    Err(_) => return Err(RegisterFileError::SetError(register, data)),
+                    Err(_) => return Err(RegisterFileError::SetError(register.clone(), data)),
                 }
             }
             Registers::A32 | Registers::B32 | Registers::C32 | Registers::D32 => {
                 match <u32>::try_from(data) {
                     Ok(_) => unsafe { self.set(register, data) },
-                    Err(_) => return Err(RegisterFileError::SetError(register, data)),
+                    Err(_) => return Err(RegisterFileError::SetError(register.clone(), data)),
                 }
             }
             Registers::A64 | Registers::B64 | Registers::C64 | Registers::D64 => {
                 match <u64>::try_from(data) {
                     Ok(_) => unsafe { self.set(register, data) },
-                    Err(_) => return Err(RegisterFileError::SetError(register, data)),
+                    Err(_) => return Err(RegisterFileError::SetError(register.clone(), data)),
                 }
             }
-            ur => return Err(RegisterFileError::GeneralUnsupportSet(ur)),
+            ur => return Err(RegisterFileError::GeneralUnsupportSet(ur.clone())),
         };
         return Ok(());
     }
 
-    pub fn get_general(&self, register: Registers) -> Result<u64, RegisterFileError> {
+    pub fn get_general(&self, register: &Registers) -> Result<u64, RegisterFileError> {
         match register {
             Registers::A8
             | Registers::B8
@@ -213,11 +227,11 @@ impl RegisterFile {
             | Registers::B64
             | Registers::C64
             | Registers::D64 => return Ok(unsafe { self.get(register) }),
-            ur => return Err(RegisterFileError::GeneralUnsupportSet(ur)),
+            ur => return Err(RegisterFileError::GeneralUnsupportSet(ur.clone())),
         };
     }
 
-    pub unsafe fn get(&self, register: Registers) -> u64 {
+    pub unsafe fn get(&self, register: &Registers) -> u64 {
         match register {
             Registers::A8 => self.get_a8().into(),
             Registers::A16 => self.get_a16().into(),
@@ -239,7 +253,7 @@ impl RegisterFile {
         }
     }
 
-    pub unsafe fn set(&mut self, register: Registers, data: u64) {
+    pub unsafe fn set(&mut self, register: &Registers, data: u64) {
         match register {
             Registers::A8 => self.set_a8(data as u8),
             Registers::A16 => self.set_a16(data as u16),

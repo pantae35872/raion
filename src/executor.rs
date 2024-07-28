@@ -4,6 +4,7 @@ use crate::{
 };
 
 use self::registers::RegisterFile;
+use crate::decoder::instruction::Instruction;
 
 pub mod registers;
 
@@ -18,8 +19,21 @@ impl<'a> Executor<'a> {
     }
 
     pub fn execute(&mut self) {
-        let mut decoder = Decoder::new(self.memory, self.register);
-        decoder.decode_and_execute().unwrap();
+        while !self.register.get_halt() {
+            {
+                let mut decoder = Decoder::new(self.memory, self.register);
+                let mut instruction = match decoder.decode() {
+                    Ok(result) => result,
+                    Err(e) => {
+                        println!("{}", e);
+                        return;
+                    }
+                };
+
+                instruction.execute().unwrap();
+            }
+            self.debug_register();
+        }
     }
 
     pub fn debug_register(&self) {

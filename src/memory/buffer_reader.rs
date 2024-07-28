@@ -39,6 +39,17 @@ impl<'a> BufferReader<'a> {
         }));
     }
 
+    pub fn read_u8(&mut self) -> Option<u8> {
+        let u64_bytes = match self.read_bytes(1) {
+            Some(bytes) => bytes,
+            None => return None,
+        };
+        return Some(u8::from_le_bytes(match <[u8; 1]>::try_from(u64_bytes) {
+            Ok(bytes) => bytes,
+            Err(_) => return None,
+        }));
+    }
+
     pub fn get_read_pos(&self) -> usize {
         return self.read_pos;
     }
