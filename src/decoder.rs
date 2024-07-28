@@ -1,12 +1,15 @@
 use std::{error::Error, fmt::Display};
 
 use crate::{
-    executor::registers::Register,
+    executor::registers::RegisterFile,
     memory::{address::Address, Memory, MemoryError},
 };
 
-pub mod instruction;
+use self::{argument::Argument, instruction::decode};
+use crate::decoder::instruction::Instruction;
 
+pub mod instruction;
+pub mod argument;
 
 #[derive(Debug)]
 pub enum DecoderError {
@@ -30,15 +33,15 @@ impl Error for DecoderError {}
 
 pub struct Decoder<'a, 'b> {
     memory: &'a Memory,
-    register: &'b Register,
+    register: &'b mut RegisterFile,
 }
 
 impl<'a, 'b> Decoder<'a, 'b> {
-    pub fn new(memory: &'a Memory, register: &'b Register) -> Self {
+    pub fn new(memory: &'a Memory, register: &'b mut RegisterFile) -> Self {
         Self { memory, register }
     }
 
-    pub fn decode(&self) -> Result<&Self, DecoderError> {
+    pub fn decode_and_execute(&mut self) -> Result<(), DecoderError> {
         let instruction_length = match self.memory.mem_get(self.register.get_ip()) {
             Ok(il) => il as usize,
             Err(err) => match err {
@@ -59,12 +62,9 @@ impl<'a, 'b> Decoder<'a, 'b> {
         }
         let opcode = u16::from_le_bytes(<[u8; 2]>::try_from(&instruction[1..=2]).unwrap());
         let argument = &instruction[3..instruction_length];
-
-        match opcode {
-            16 => println!("mov"),
-            e => return Err(DecoderError::InvalidOpCode(e)) 
-        }
-
-        Ok(self)
+        let mut argument = Argument::new(argument);
+        let mut instruction = decode(opcode, self.register, &mut argument)?;
+        instruction.execute().unwrap();
+        return Ok(());
     }
 }

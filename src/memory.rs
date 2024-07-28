@@ -7,6 +7,7 @@ use std::{
 use self::address::Address;
 
 pub mod address;
+pub mod buffer_reader;
 
 #[derive(Debug, PartialEq)]
 pub enum MemoryError {
