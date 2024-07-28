@@ -1,3 +1,5 @@
+use crate::executor::registers::Register;
+
 pub trait Instruction {
-    pub fn execute(register: )
+    fn execute(register: &mut Register);
 }

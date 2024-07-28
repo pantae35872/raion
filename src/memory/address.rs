@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Add};
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Address(usize);
 
 impl Address {
