@@ -32,7 +32,6 @@ impl<'a> Executor<'a> {
 
                 instruction.execute().unwrap();
             }
-            self.debug_register();
         }
     }
 
