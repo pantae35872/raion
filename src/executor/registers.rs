@@ -2,6 +2,10 @@ use std::{error::Error, fmt::Display};
 
 use crate::memory::address::Address;
 
+use self::flags::Flags;
+
+mod flags;
+
 #[derive(Debug, Clone, Copy)]
 pub enum Registers {
     A8,
@@ -21,6 +25,8 @@ pub enum Registers {
     D32,
     D64,
     IP,
+    HALT,
+    FLAGS,
 }
 
 impl Display for Registers {
@@ -43,6 +49,8 @@ impl Display for Registers {
             Registers::D32 => write!(f, "d32"),
             Registers::D64 => write!(f, "d64"),
             Registers::IP => write!(f, "instruction pointer"),
+            Registers::HALT => write!(f, "halt"),
+            Registers::FLAGS => write!(f, "flags"),
         }
     }
 }
@@ -112,6 +120,7 @@ pub struct RegisterFile {
     d: u64,
     ip: Address,
     halt: bool,
+    flags: Flags,
 }
 
 #[derive(Debug)]
@@ -148,6 +157,7 @@ impl RegisterFile {
             d: 0,
             ip: Address::new(0x0),
             halt: false,
+            flags: Flags::new(),
         }
     }
 
@@ -250,6 +260,8 @@ impl RegisterFile {
             Registers::D32 => self.get_d32().into(),
             Registers::D64 => self.get_d64(),
             Registers::IP => self.get_ip().get_raw() as u64,
+            Registers::FLAGS => self.get_flags_raw().into(),
+            Registers::HALT => self.get_halt().into(),
         }
     }
 
@@ -272,7 +284,41 @@ impl RegisterFile {
             Registers::D32 => self.set_d32(data as u32),
             Registers::D64 => self.set_d64(data as u64),
             Registers::IP => self.set_ip(Address::new(data as usize)),
+            Registers::HALT => self.set_halt(data != 0),
+            Registers::FLAGS => self.set_flags_raw(data as u16),
         }
+    }
+
+    pub fn set_negative(&mut self, data: bool) {
+        self.flags.set_negative(data);
+    }
+
+    pub fn get_negative(&self) -> bool {
+        return self.flags.negative();
+    }
+
+    pub fn set_carry(&mut self, data: bool) {
+        self.flags.set_carry(data);
+    }
+
+    pub fn get_carry(&self) -> bool {
+        return self.flags.carry();
+    }
+
+    pub fn set_zero(&mut self, data: bool) {
+        self.flags.set_zero(data);
+    }
+
+    pub fn get_zero(&self) -> bool {
+        return self.flags.zero();
+    }
+
+    unsafe fn set_flags_raw(&mut self, data: u16) {
+        self.flags = Flags::from_bits(data);
+    }
+
+    pub fn get_flags_raw(&self) -> u16 {
+        return self.flags.into_bits();
     }
 
     fn set_a8(&mut self, data: u8) {

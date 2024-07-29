@@ -11,11 +11,11 @@ fn main() {
     let mut memory = Memory::new(16);
     let opcode = 16u16.to_le_bytes();
     memory
-        .mem_sets(Address::new(0x0), &[6, opcode[0], opcode[1], 1, 1, 5])
+        .mem_sets(Address::new(0x0), &[6, opcode[0], opcode[1], 1, 4, 8])
         .unwrap();
     let opcode = 32u16.to_le_bytes();
     memory
-        .mem_sets(Address::new(0x6), &[5, opcode[0], opcode[1], 1, 5])
+        .mem_sets(Address::new(0x6), &[5, opcode[0], opcode[1], 4, 8])
         .unwrap();
     let opcode = 65535u16.to_le_bytes();
     memory
@@ -23,10 +23,10 @@ fn main() {
         .unwrap();
     let mut register = RegisterFile::new();
     register
-        .set_general(&executor::registers::Registers::A8, 5)
+        .set_general(&executor::registers::Registers::A64, 5)
         .unwrap();
     register
-        .set_general(&executor::registers::Registers::B8, 8)
+        .set_general(&executor::registers::Registers::B64, 0xFFFFFFFFFFFFFFFF)
         .unwrap();
     let mut executor = Executor::new(&mut memory, &mut register);
     executor.debug_register();
