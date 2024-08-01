@@ -45,4 +45,8 @@ impl<'a, 'b> Instruction for Mov<'a, 'b> {
         };
         return Ok(());
     }
+
+    fn op_code(&self) -> u16 {
+        return MOV_OPCODE;
+    }
 }

@@ -30,9 +30,19 @@ impl<'a> Executor<'a> {
                     }
                 };
 
-                instruction.execute().unwrap();
+                match instruction.execute() {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!(
+                            "Error occur while executing instruction: {}, with opcode: {}",
+                            e,
+                            instruction.op_code()
+                        );
+                    }
+                };
             }
         }
+        self.debug_register();
     }
 
     pub fn debug_register(&self) {

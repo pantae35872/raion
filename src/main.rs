@@ -1,65 +1,82 @@
 #![feature(test)]
 
+use decoder::instruction::{ADD_OPCODE, CMP_OPCODE, HALT_OPCODE, JMP_OPCODE, JMZ_OPCODE};
 use executor::{registers::RegisterFile, Executor};
 use memory::address::Address;
 
 use crate::memory::Memory;
 
 extern crate test;
-use test::Bencher;
 
 pub mod decoder;
 pub mod executor;
 pub mod memory;
 
 fn main() {
-    let mut memory = Memory::new(16);
-    let opcode = 16u16.to_le_bytes();
+    let mut memory = Memory::new(64);
+    let mut instruction_count = 0;
+    //let opcode = 16u16.to_le_bytes();
+    //memory
+    //    .mem_sets(
+    //        Address::new(instruction_count),
+    //        &[6, opcode[0], opcode[1], 1, 4, 8],
+    //    )
+    //    .unwrap();
+    //instruction_count += 6;
+    let opcode = ADD_OPCODE.to_le_bytes();
     memory
-        .mem_sets(Address::new(0x0), &[6, opcode[0], opcode[1], 1, 4, 8])
+        .mem_sets(
+            Address::new(instruction_count),
+            &[5, opcode[0], opcode[1], 4, 8],
+        )
         .unwrap();
-    let opcode = 32u16.to_le_bytes();
+    instruction_count += 5;
+    let opcode = CMP_OPCODE.to_le_bytes();
     memory
-        .mem_sets(Address::new(0x6), &[5, opcode[0], opcode[1], 4, 8])
+        .mem_sets(
+            Address::new(instruction_count),
+            &[5, opcode[0], opcode[1], 4, 12],
+        )
         .unwrap();
-    let opcode = 65535u16.to_le_bytes();
+    instruction_count += 5;
+    let address = Address::new(instruction_count + 22).get_raw().to_le_bytes();
+    let opcode = JMZ_OPCODE.to_le_bytes();
     memory
-        .mem_sets(Address::new(0xb), &[3, opcode[0], opcode[1]])
+        .mem_sets(
+            Address::new(instruction_count),
+            &[
+                11, opcode[0], opcode[1], address[0], address[1], address[2], address[3],
+                address[4], address[5], address[6], address[7],
+            ],
+        )
+        .unwrap();
+    instruction_count += 11;
+    let address = Address::new(0x0).get_raw().to_le_bytes();
+    let opcode = JMP_OPCODE.to_le_bytes();
+    memory
+        .mem_sets(
+            Address::new(instruction_count),
+            &[
+                11, opcode[0], opcode[1], address[0], address[1], address[2], address[3],
+                address[4], address[5], address[6], address[7],
+            ],
+        )
+        .unwrap();
+    instruction_count += 11;
+    let opcode = HALT_OPCODE.to_le_bytes();
+    memory
+        .mem_sets(Address::new(instruction_count), &[3, opcode[0], opcode[1]])
         .unwrap();
     let mut register = RegisterFile::new();
     register
-        .set_general(&executor::registers::Registers::A64, 5)
+        .set_general(&executor::registers::Registers::A64, 0)
         .unwrap();
     register
-        .set_general(&executor::registers::Registers::B64, 0xFFFFFFFFFFFFFFFF)
+        .set_general(&executor::registers::Registers::B64, 1)
+        .unwrap();
+    register
+        .set_general(&executor::registers::Registers::C64, 1000000)
         .unwrap();
     let mut executor = Executor::new(&mut memory, &mut register);
     executor.execute();
-}
-#[bench]
-fn bench_simple_execute(b: &mut Bencher) {
-    let mut memory = Memory::new(16);
-    let mut register = RegisterFile::new();
-    b.iter(|| {
-        test::black_box({
-            let opcode = 16u16.to_le_bytes();
-            memory
-                .mem_sets(Address::new(0x0), &[6, opcode[0], opcode[1], 1, 4, 8])
-                .unwrap();
-            let opcode = 65535u16.to_le_bytes();
-            memory
-                .mem_sets(Address::new(0x6), &[3, opcode[0], opcode[1]])
-                .unwrap();
-            register
-                .set_general(&executor::registers::Registers::A64, 5)
-                .unwrap();
-            register
-                .set_general(&executor::registers::Registers::B64, 0xFFFFFFFFFFFFFFFF)
-                .unwrap();
-            register.set_halt(false);
-            register.set_ip(Address::new(0));
-            let mut executor = Executor::new(&mut memory, &mut register);
-            executor.execute();
-        });
-    });
 }
