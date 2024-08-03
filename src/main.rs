@@ -1,8 +1,14 @@
 #![feature(test)]
 
-use decoder::instruction::{ADD_OPCODE, CMP_OPCODE, HALT_OPCODE, JMP_OPCODE, JMZ_OPCODE};
+use decoder::{
+    instruction::{ADD_OPCODE, CMP_OPCODE, HALT_OPCODE, JMP_OPCODE, JMZ_OPCODE},
+    Decoder,
+};
 use executor::{registers::RegisterFile, Executor};
-use memory::address::Address;
+use memory::{
+    address::Address,
+    argument_memory::{self, ArgumentMemory},
+};
 
 use crate::memory::Memory;
 
@@ -75,8 +81,9 @@ fn main() {
         .set_general(&executor::registers::Registers::B64, 1)
         .unwrap();
     register
-        .set_general(&executor::registers::Registers::C64, 1000000)
+        .set_general(&executor::registers::Registers::C64, 1000000000)
         .unwrap();
-    let mut executor = Executor::new(&mut memory, &mut register);
+    let mut argument_memory = ArgumentMemory::new();
+    let mut executor = Executor::new(&mut memory, &mut register, &mut argument_memory);
     executor.execute();
 }

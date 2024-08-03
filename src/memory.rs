@@ -7,6 +7,7 @@ use std::{
 use self::address::Address;
 
 pub mod address;
+pub mod argument_memory;
 pub mod buffer_reader;
 
 #[derive(Debug, PartialEq)]

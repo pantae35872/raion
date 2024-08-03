@@ -1,12 +1,13 @@
 use std::{error::Error, fmt::Display};
 
+use instruction::Instructions;
+
 use crate::{
     executor::registers::RegisterFile,
-    memory::{address::Address, Memory, MemoryError},
+    memory::{address::Address, argument_memory::ArgumentMemory, Memory, MemoryError},
 };
 
-use self::{argument::Argument, instruction::{decode, InstructionError}};
-use crate::decoder::instruction::Instruction;
+use self::argument::Argument;
 
 pub mod instruction;
 pub mod argument;
@@ -33,16 +34,16 @@ impl Error for DecoderError {}
 
 pub struct Decoder<'a, 'b> {
     memory: &'a mut Memory,
-    argument_memory: Option<Vec<u8>>,
+    argument_memory: &'a mut ArgumentMemory,
     register: &'b mut RegisterFile,
 }
 
 impl<'a, 'b> Decoder<'a, 'b> {
-    pub fn new(memory: &'a mut Memory, register: &'b mut RegisterFile) -> Self {
-        Self { memory, register, argument_memory: None }
+    pub fn new(memory: &'a mut Memory, register: &'b mut RegisterFile, argument_memory: &'a mut ArgumentMemory) -> Self {
+        Self { memory, register, argument_memory }
     }
 
-    pub fn decode(&mut self) -> Result<Box<dyn Instruction + '_>, DecoderError> {
+    pub fn decode(&mut self) -> Result<Instructions, DecoderError> {
         let instruction_length = match self.memory.mem_get(self.register.get_ip()) {
             Ok(il) => il as usize,
             Err(err) => match err {
@@ -63,7 +64,7 @@ impl<'a, 'b> Decoder<'a, 'b> {
         }
         let opcode = u16::from_le_bytes(<[u8; 2]>::try_from(&instruction[1..=2]).unwrap());
         let argument = &instruction[3..instruction_length];
-        self.argument_memory = Some(argument.to_vec());
-        return Ok(decode(opcode, self.register, self.memory, Argument::new(self.argument_memory.as_ref().unwrap().as_slice()), instruction_length)?);
+        self.argument_memory.set_arguement(argument);
+        return Ok(Instructions::decode(opcode, self.register, self.memory, Argument::new(self.argument_memory.get_argument()), instruction_length)?);
     }
 }

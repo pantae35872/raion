@@ -65,29 +65,63 @@ impl From<ArgumentParseError> for InstructionError {
     }
 }
 
-//TODO: Change to enum insted of trait for performance
-pub fn decode<'a>(
-    op_code: u16,
-    register: &'a mut RegisterFile,
-    memory: &'a mut Memory,
-    argument: Argument<'a>,
-    instruction_length: usize,
-) -> Result<Box<dyn Instruction + 'a>, DecoderError> {
-    match op_code {
-        MOV_OPCODE => {
-            return Ok(Box::from(Mov::new(
-                register,
-                memory,
-                argument,
-                instruction_length,
-            )))
+pub enum Instructions<'a> {
+    Mov(Mov<'a, 'a>),
+    Add(Add<'a, 'a>),
+    Halt(Halt<'a>),
+    Jmp(Jmp<'a, 'a>),
+    Jmz(Jmz<'a, 'a>),
+    Cmp(Cmp<'a, 'a>),
+}
+
+impl<'a> Instructions<'a> {
+    pub fn decode(
+        op_code: u16,
+        register: &'a mut RegisterFile,
+        memory: &'a mut Memory,
+        argument: Argument<'a>,
+        instruction_length: usize,
+    ) -> Result<Self, DecoderError> {
+        match op_code {
+            MOV_OPCODE => {
+                return Ok(Self::Mov(Mov::new(
+                    register,
+                    memory,
+                    argument,
+                    instruction_length,
+                )))
+            }
+            ADD_OPCODE => return Ok(Self::Add(Add::new(register, argument, instruction_length))),
+            HALT_OPCODE => return Ok(Self::Halt(Halt::new(register, instruction_length))),
+            JMP_OPCODE => return Ok(Self::Jmp(Jmp::new(register, argument))),
+            JMZ_OPCODE => return Ok(Self::Jmz(Jmz::new(register, argument, instruction_length))),
+            CMP_OPCODE => return Ok(Self::Cmp(Cmp::new(register, argument, instruction_length))),
+            iop_code => return Err(DecoderError::InvalidOpCode(iop_code)),
         }
-        ADD_OPCODE => return Ok(Box::from(Add::new(register, argument, instruction_length))),
-        HALT_OPCODE => return Ok(Box::from(Halt::new(register, instruction_length))),
-        JMP_OPCODE => return Ok(Box::from(Jmp::new(register, argument))),
-        JMZ_OPCODE => return Ok(Box::from(Jmz::new(register, argument, instruction_length))),
-        CMP_OPCODE => return Ok(Box::from(Cmp::new(register, argument, instruction_length))),
-        iop_code => return Err(DecoderError::InvalidOpCode(iop_code)),
+    }
+}
+
+impl<'a> Instruction for Instructions<'a> {
+    fn execute(&mut self) -> Result<(), InstructionError> {
+        match self {
+            Self::Mov(mov) => mov.execute(),
+            Self::Add(add) => add.execute(),
+            Self::Halt(halt) => halt.execute(),
+            Self::Jmp(jmp) => jmp.execute(),
+            Self::Jmz(jmz) => jmz.execute(),
+            Self::Cmp(cmp) => cmp.execute(),
+        }
+    }
+
+    fn op_code(&self) -> u16 {
+        match self {
+            Self::Mov(mov) => mov.op_code(),
+            Self::Add(add) => add.op_code(),
+            Self::Halt(halt) => halt.op_code(),
+            Self::Jmp(jmp) => jmp.op_code(),
+            Self::Jmz(jmz) => jmz.op_code(),
+            Self::Cmp(cmp) => cmp.op_code(),
+        }
     }
 }
 

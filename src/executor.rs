@@ -1,6 +1,6 @@
 use crate::{
     decoder::Decoder,
-    memory::{address::Address, Memory},
+    memory::{address::Address, argument_memory::ArgumentMemory, Memory},
 };
 
 use self::registers::RegisterFile;
@@ -11,17 +11,26 @@ pub mod registers;
 pub struct Executor<'a> {
     memory: &'a mut Memory,
     register: &'a mut RegisterFile,
+    argument_memory: &'a mut ArgumentMemory,
 }
 
 impl<'a> Executor<'a> {
-    pub fn new(memory: &'a mut Memory, register: &'a mut RegisterFile) -> Self {
-        Self { memory, register }
+    pub fn new(
+        memory: &'a mut Memory,
+        register: &'a mut RegisterFile,
+        argument_memory: &'a mut ArgumentMemory,
+    ) -> Self {
+        Self {
+            memory,
+            register,
+            argument_memory,
+        }
     }
 
     pub fn execute(&mut self) {
         while !self.register.get_halt() {
             {
-                let mut decoder = Decoder::new(self.memory, self.register);
+                let mut decoder = Decoder::new(self.memory, self.register, self.argument_memory);
                 let mut instruction = match decoder.decode() {
                     Ok(result) => result,
                     Err(e) => {
@@ -38,11 +47,11 @@ impl<'a> Executor<'a> {
                             e,
                             instruction.op_code()
                         );
+                        return;
                     }
                 };
             }
         }
-        self.debug_register();
     }
 
     pub fn debug_register(&self) {
