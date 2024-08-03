@@ -52,6 +52,7 @@ impl<'a> Executor<'a> {
                 };
             }
         }
+        self.debug_register();
     }
 
     pub fn debug_register(&self) {
