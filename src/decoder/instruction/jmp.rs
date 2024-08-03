@@ -1,4 +1,4 @@
-use crate::{decoder::argument::Argument, executor::registers::RegisterFile, memory::Memory};
+use crate::{decoder::argument::Argument, executor::registers::RegisterFile};
 
 use super::{Instruction, JMP_OPCODE};
 

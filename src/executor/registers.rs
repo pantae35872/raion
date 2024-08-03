@@ -29,6 +29,15 @@ pub enum Registers {
     FLAGS,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum RegisterSizes {
+    SizeBool,
+    SizeU8,
+    SizeU16,
+    SizeU32,
+    SizeU64,
+}
+
 impl Display for Registers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -96,6 +105,20 @@ impl Registers {
             255 => return Ok(Self::IP),
             e => return Err(RegisterParseError::InvalidByteForm(e)),
         };
+    }
+
+    pub fn size(&self) -> RegisterSizes {
+        match self {
+            Self::HALT => return RegisterSizes::SizeBool,
+            Self::A8 | Self::B8 | Self::C8 | Self::D8 => return RegisterSizes::SizeU8,
+            Self::A16 | Self::B16 | Self::C16 | Self::D16 | Self::FLAGS => {
+                return RegisterSizes::SizeU16;
+            }
+            Self::A32 | Self::B32 | Self::C32 | Self::D32 => return RegisterSizes::SizeU32,
+            Self::A64 | Self::B64 | Self::C64 | Self::D64 | Self::IP => {
+                return RegisterSizes::SizeU64;
+            }
+        }
     }
 }
 

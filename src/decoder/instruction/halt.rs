@@ -1,4 +1,4 @@
-use crate::{decoder::argument::Argument, executor::registers::RegisterFile, memory::Memory};
+use crate::executor::registers::RegisterFile;
 
 use super::{Instruction, HALT_OPCODE};
 

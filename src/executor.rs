@@ -1,6 +1,6 @@
 use crate::{
     decoder::Decoder,
-    memory::{address::Address, argument_memory::ArgumentMemory, Memory},
+    memory::{argument_memory::ArgumentMemory, Memory},
 };
 
 use self::registers::RegisterFile;
