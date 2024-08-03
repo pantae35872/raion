@@ -1,6 +1,7 @@
 use std::{error::Error, fmt::Display};
 
 use cmp::Cmp;
+use inc::Inc;
 use jmp::Jmp;
 use jmz::Jmz;
 
@@ -19,11 +20,13 @@ use super::{
 mod add;
 mod cmp;
 mod halt;
+mod inc;
 mod jmp;
 mod jmz;
 mod mov;
 
 pub const MOV_OPCODE: u16 = 16;
+pub const INC_OPCODE: u16 = 30;
 pub const CMP_OPCODE: u16 = 31;
 pub const ADD_OPCODE: u16 = 32;
 pub const JMP_OPCODE: u16 = 33;
@@ -72,6 +75,7 @@ pub enum Instructions<'a> {
     Jmp(Jmp<'a, 'a>),
     Jmz(Jmz<'a, 'a>),
     Cmp(Cmp<'a, 'a>),
+    Inc(Inc<'a, 'a>),
 }
 
 impl<'a> Instructions<'a> {
@@ -96,6 +100,7 @@ impl<'a> Instructions<'a> {
             JMP_OPCODE => return Ok(Self::Jmp(Jmp::new(register, argument))),
             JMZ_OPCODE => return Ok(Self::Jmz(Jmz::new(register, argument, instruction_length))),
             CMP_OPCODE => return Ok(Self::Cmp(Cmp::new(register, argument, instruction_length))),
+            INC_OPCODE => return Ok(Self::Inc(Inc::new(register, argument, instruction_length))),
             iop_code => return Err(DecoderError::InvalidOpCode(iop_code)),
         }
     }
@@ -110,6 +115,7 @@ impl<'a> Instruction for Instructions<'a> {
             Self::Jmp(jmp) => jmp.execute(),
             Self::Jmz(jmz) => jmz.execute(),
             Self::Cmp(cmp) => cmp.execute(),
+            Self::Inc(inc) => inc.execute(),
         }
     }
 
@@ -121,6 +127,7 @@ impl<'a> Instruction for Instructions<'a> {
             Self::Jmp(jmp) => jmp.op_code(),
             Self::Jmz(jmz) => jmz.op_code(),
             Self::Cmp(cmp) => cmp.op_code(),
+            Self::Inc(inc) => inc.op_code(),
         }
     }
 }

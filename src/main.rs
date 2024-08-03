@@ -1,7 +1,7 @@
 #![feature(test)]
 
 use decoder::{
-    instruction::{ADD_OPCODE, CMP_OPCODE, HALT_OPCODE, JMP_OPCODE, JMZ_OPCODE},
+    instruction::{ADD_OPCODE, CMP_OPCODE, HALT_OPCODE, INC_OPCODE, JMP_OPCODE, JMZ_OPCODE},
     Decoder,
 };
 use executor::{registers::RegisterFile, Executor};
@@ -21,22 +21,14 @@ pub mod memory;
 fn main() {
     let mut memory = Memory::new(64);
     let mut instruction_count = 0;
-    //let opcode = 16u16.to_le_bytes();
-    //memory
-    //    .mem_sets(
-    //        Address::new(instruction_count),
-    //        &[6, opcode[0], opcode[1], 1, 4, 8],
-    //    )
-    //    .unwrap();
-    //instruction_count += 6;
-    let opcode = ADD_OPCODE.to_le_bytes();
+    let opcode = INC_OPCODE.to_le_bytes();
     memory
         .mem_sets(
             Address::new(instruction_count),
-            &[5, opcode[0], opcode[1], 4, 8],
+            &[4, opcode[0], opcode[1], 4],
         )
         .unwrap();
-    instruction_count += 5;
+    instruction_count += 4;
     let opcode = CMP_OPCODE.to_le_bytes();
     memory
         .mem_sets(

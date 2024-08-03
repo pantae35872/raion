@@ -1,6 +1,6 @@
 use crate::{decoder::argument::Argument, executor::registers::RegisterFile};
 
-use super::{Instruction, ADD_OPCODE, CMP_OPCODE};
+use super::{Instruction, ADD_OPCODE};
 
 pub struct Add<'a, 'b> {
     register: &'a mut RegisterFile,
