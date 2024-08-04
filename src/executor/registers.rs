@@ -201,10 +201,8 @@ impl RegisterFile {
     }
 
     /// Increment 'ip' by perfered value and return increased 'ip'
-    pub fn inc_ip(&mut self, amount: usize) -> Address {
-        let inc_ip = self.ip.clone() + amount;
-        self.ip = inc_ip.clone();
-        return inc_ip;
+    pub fn inc_ip(&mut self, amount: usize) {
+        self.ip += amount;
     }
 
     pub fn set_general(

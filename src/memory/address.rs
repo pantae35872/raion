@@ -1,6 +1,9 @@
-use std::{fmt::Display, ops::Add};
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign},
+};
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Address(usize);
 
 impl Address {
@@ -18,6 +21,12 @@ impl Add<usize> for Address {
 
     fn add(self, rhs: usize) -> Self::Output {
         Self::new(self.0 + rhs)
+    }
+}
+
+impl AddAssign<usize> for Address {
+    fn add_assign(&mut self, rhs: usize) {
+        self.0 += rhs;
     }
 }
 
