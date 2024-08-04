@@ -1,5 +1,5 @@
 use crate::{
-    decoder::Decoder,
+    decoder::decode,
     memory::{argument_memory::ArgumentMemory, Memory},
 };
 
@@ -30,8 +30,8 @@ impl<'a> Executor<'a> {
     pub fn execute(&mut self) {
         while !self.register.get_halt() {
             {
-                let mut decoder = Decoder::new(self.memory, self.register, self.argument_memory);
-                let mut instruction = match decoder.decode() {
+                let mut instruction = match decode(self.memory, self.register, self.argument_memory)
+                {
                     Ok(result) => result,
                     Err(e) => {
                         println!("{}", e);

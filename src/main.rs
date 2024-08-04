@@ -6,8 +6,6 @@ use memory::{address::Address, argument_memory::ArgumentMemory};
 
 use crate::memory::Memory;
 
-extern crate test;
-
 pub mod decoder;
 pub mod executor;
 pub mod memory;
@@ -67,7 +65,7 @@ fn main() {
         .set_general(&executor::registers::Registers::B64, 1)
         .unwrap();
     register
-        .set_general(&executor::registers::Registers::C64, 1000000)
+        .set_general(&executor::registers::Registers::C64, 1000000000)
         .unwrap();
     let mut argument_memory = ArgumentMemory::new();
     let mut executor = Executor::new(&mut memory, &mut register, &mut argument_memory);
