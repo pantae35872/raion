@@ -2,6 +2,9 @@ use std::{error::Error, fmt::Display};
 
 use cmp::Cmp;
 use inc::Inc;
+use jacc::Jacc;
+use jacn::Jacn;
+use jacz::Jacz;
 use jmn::Jmn;
 use jmp::Jmp;
 use jmz::Jmz;
@@ -23,6 +26,11 @@ mod add;
 mod cmp;
 mod halt;
 mod inc;
+mod jacc;
+mod jace;
+mod jacn;
+mod jacz;
+mod jme;
 mod jmn;
 mod jmp;
 mod jmz;
@@ -40,6 +48,11 @@ pub const SUB_OPCODE: u16 = 33;
 pub const JMP_OPCODE: u16 = 64;
 pub const JMZ_OPCODE: u16 = 65;
 pub const JMN_OPCODE: u16 = 66;
+pub const JACN_OPCODE: u16 = 67;
+pub const JACZ_OPCODE: u16 = 68;
+pub const JACC_OPCODE: u16 = 69;
+pub const JACE_OPCODE: u16 = 70;
+pub const JME_OPCODE: u16 = 71;
 //Cpu state releate instructions
 pub const HALT_OPCODE: u16 = 65535;
 
@@ -102,6 +115,9 @@ pub enum Instructions<'a> {
     Inc(Inc<'a, 'a>),
     Jmn(Jmn<'a, 'a>),
     Sub(Sub<'a, 'a>),
+    Jacn(Jacn<'a, 'a>),
+    Jacz(Jacz<'a, 'a>),
+    Jacc(Jacc<'a, 'a>),
 }
 
 impl<'a> Instructions<'a> {
@@ -127,6 +143,27 @@ impl<'a> Instructions<'a> {
             JMP_OPCODE => return Ok(Self::Jmp(Jmp::new(register, argument))),
             JMN_OPCODE => return Ok(Self::Jmn(Jmn::new(register, argument, instruction_length))),
             JMZ_OPCODE => return Ok(Self::Jmz(Jmz::new(register, argument, instruction_length))),
+            JACN_OPCODE => {
+                return Ok(Self::Jacn(Jacn::new(
+                    register,
+                    argument,
+                    instruction_length,
+                )))
+            }
+            JACZ_OPCODE => {
+                return Ok(Self::Jacz(Jacz::new(
+                    register,
+                    argument,
+                    instruction_length,
+                )))
+            }
+            JACC_OPCODE => {
+                return Ok(Self::Jacc(Jacc::new(
+                    register,
+                    argument,
+                    instruction_length,
+                )))
+            }
             CMP_OPCODE => return Ok(Self::Cmp(Cmp::new(register, argument, instruction_length))),
             INC_OPCODE => return Ok(Self::Inc(Inc::new(register, argument, instruction_length))),
             iop_code => return Err(DecoderError::InvalidOpCode(iop_code)),
@@ -146,6 +183,9 @@ impl<'a> Instruction for Instructions<'a> {
             Self::Jmz(jmz) => jmz.execute(),
             Self::Cmp(cmp) => cmp.execute(),
             Self::Inc(inc) => inc.execute(),
+            Self::Jacn(jacn) => jacn.execute(),
+            Self::Jacz(jacz) => jacz.execute(),
+            Self::Jacc(jacc) => jacc.execute(),
         }
     }
 
@@ -160,6 +200,9 @@ impl<'a> Instruction for Instructions<'a> {
             Self::Jmz(jmz) => jmz.op_code(),
             Self::Cmp(cmp) => cmp.op_code(),
             Self::Inc(inc) => inc.op_code(),
+            Self::Jacn(jacn) => jacn.op_code(),
+            Self::Jacz(jacz) => jacz.op_code(),
+            Self::Jacc(jacc) => jacc.op_code(),
         }
     }
 }
