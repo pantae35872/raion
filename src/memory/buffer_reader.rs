@@ -1,3 +1,5 @@
+use std::u16;
+
 pub struct BufferReader<'a> {
     buffer: &'a [u8],
     read_pos: usize,
@@ -34,6 +36,26 @@ impl<'a> BufferReader<'a> {
             None => return None,
         };
         return Some(u64::from_le_bytes(match <[u8; 8]>::try_from(u64_bytes) {
+            Ok(bytes) => bytes,
+            Err(_) => return None,
+        }));
+    }
+    pub fn read_u32(&mut self) -> Option<u32> {
+        let bytes = match self.read_bytes(4) {
+            Some(bytes) => bytes,
+            None => return None,
+        };
+        return Some(u32::from_le_bytes(match <[u8; 4]>::try_from(bytes) {
+            Ok(bytes) => bytes,
+            Err(_) => return None,
+        }));
+    }
+    pub fn read_u16(&mut self) -> Option<u16> {
+        let bytes = match self.read_bytes(2) {
+            Some(bytes) => bytes,
+            None => return None,
+        };
+        return Some(u16::from_le_bytes(match <[u8; 2]>::try_from(bytes) {
             Ok(bytes) => bytes,
             Err(_) => return None,
         }));

@@ -25,6 +25,7 @@ pub enum Registers {
     D32,
     D64,
     IP,
+    SP,
     HALT,
     FLAGS,
 }
@@ -36,6 +37,18 @@ pub enum RegisterSizes {
     SizeU16,
     SizeU32,
     SizeU64,
+}
+
+impl RegisterSizes {
+    pub fn byte(&self) -> usize {
+        match self {
+            RegisterSizes::SizeBool => return 1,
+            RegisterSizes::SizeU8 => return 1,
+            RegisterSizes::SizeU16 => return 2,
+            RegisterSizes::SizeU32 => return 4,
+            RegisterSizes::SizeU64 => return 8,
+        }
+    }
 }
 
 impl Display for Registers {
@@ -60,6 +73,7 @@ impl Display for Registers {
             Registers::IP => write!(f, "instruction pointer"),
             Registers::HALT => write!(f, "halt"),
             Registers::FLAGS => write!(f, "flags"),
+            Registers::SP => write!(f, "stack pointer"),
         }
     }
 }
@@ -102,6 +116,7 @@ impl Registers {
             14 => return Ok(Self::D16),
             15 => return Ok(Self::D32),
             16 => return Ok(Self::D64),
+            254 => return Ok(Self::SP),
             255 => return Ok(Self::IP),
             e => return Err(RegisterParseError::InvalidByteForm(e)),
         };
@@ -115,7 +130,7 @@ impl Registers {
                 return RegisterSizes::SizeU16;
             }
             Self::A32 | Self::B32 | Self::C32 | Self::D32 => return RegisterSizes::SizeU32,
-            Self::A64 | Self::B64 | Self::C64 | Self::D64 | Self::IP => {
+            Self::A64 | Self::B64 | Self::C64 | Self::D64 | Self::IP | Self::SP => {
                 return RegisterSizes::SizeU64;
             }
         }
@@ -142,6 +157,7 @@ pub struct RegisterFile {
     c: u64,
     d: u64,
     ip: Address,
+    sp: Address,
     halt: bool,
     flags: Flags,
 }
@@ -179,6 +195,7 @@ impl RegisterFile {
             c: 0,
             d: 0,
             ip: Address::new(0x0),
+            sp: Address::new(0x0),
             halt: false,
             flags: Flags::new(),
         }
@@ -192,12 +209,28 @@ impl RegisterFile {
         return self.halt;
     }
 
+    pub fn set_sp(&mut self, data: Address) {
+        self.sp = data;
+    }
+
+    pub fn get_sp(&self) -> Address {
+        return self.sp;
+    }
+    pub fn dec_sp(&mut self, amount: usize) -> Address {
+        let value = self.sp - amount;
+        self.sp = value;
+        return value;
+    }
+    pub fn inc_sp(&mut self, amount: usize) {
+        self.sp += amount;
+    }
+
     pub fn set_ip(&mut self, data: Address) {
         self.ip = data;
     }
 
     pub fn get_ip(&self) -> Address {
-        return self.ip.clone();
+        return self.ip;
     }
 
     /// Increment 'ip' by perfered value and return increased 'ip'
@@ -281,6 +314,7 @@ impl RegisterFile {
             Registers::D32 => self.get_d32().into(),
             Registers::D64 => self.get_d64(),
             Registers::IP => self.get_ip().get_raw() as u64,
+            Registers::SP => self.get_sp().get_raw() as u64,
             Registers::FLAGS => self.get_flags_raw().into(),
             Registers::HALT => self.get_halt().into(),
         }
@@ -305,6 +339,7 @@ impl RegisterFile {
             Registers::D32 => self.set_d32(data as u32),
             Registers::D64 => self.set_d64(data as u64),
             Registers::IP => self.set_ip(Address::new(data as usize)),
+            Registers::SP => self.set_sp(Address::new(data as usize)),
             Registers::HALT => self.set_halt(data != 0),
             Registers::FLAGS => self.set_flags_raw(data as u16),
         }

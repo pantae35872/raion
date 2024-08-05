@@ -52,14 +52,28 @@ impl<'a> Argument<'a> {
         return Ok(Registers::from_byte(byte_read[0])?);
     }
 
-    pub fn parse_i64(&mut self) -> Result<i64, ArgumentParseError> {
-        let number_read = match self.reader.read_i64() {
+    pub fn parse_u64(&mut self) -> Result<u64, ArgumentParseError> {
+        let number_read = match self.reader.read_u64() {
             Some(number) => number,
             None => return Err(ArgumentParseError::OutOfRange(self.reader.get_read_pos())),
         };
         return Ok(number_read);
     }
 
+    pub fn parse_u16(&mut self) -> Result<u16, ArgumentParseError> {
+        let number_read = match self.reader.read_u16() {
+            Some(number) => number,
+            None => return Err(ArgumentParseError::OutOfRange(self.reader.get_read_pos())),
+        };
+        return Ok(number_read);
+    }
+    pub fn parse_u32(&mut self) -> Result<u32, ArgumentParseError> {
+        let number_read = match self.reader.read_u32() {
+            Some(number) => number,
+            None => return Err(ArgumentParseError::OutOfRange(self.reader.get_read_pos())),
+        };
+        return Ok(number_read);
+    }
     pub fn parse_u8(&mut self) -> Result<u8, ArgumentParseError> {
         let number_read = match self.reader.read_u8() {
             Some(number) => number,

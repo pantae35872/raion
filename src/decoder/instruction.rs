@@ -10,6 +10,8 @@ use jme::Jme;
 use jmn::Jmn;
 use jmp::Jmp;
 use jmz::Jmz;
+use pop::Pop;
+use push::Push;
 use sub::Sub;
 
 use crate::{
@@ -37,10 +39,14 @@ mod jmn;
 mod jmp;
 mod jmz;
 pub mod mov;
+mod pop;
+mod push;
 mod sub;
 
 //Memory releate instructions
 pub const MOV_OPCODE: u16 = 16;
+pub const PUSH_OPCODE: u16 = 17;
+pub const POP_OPCODE: u16 = 18;
 //Arithmetic instructions
 pub const INC_OPCODE: u16 = 30;
 pub const CMP_OPCODE: u16 = 31;
@@ -109,6 +115,8 @@ impl From<ArgumentParseError> for InstructionError {
 
 pub enum Instructions<'a> {
     Mov(Mov<'a, 'a>),
+    Push(Push<'a, 'a>),
+    Pop(Pop<'a, 'a>),
     Add(Add<'a, 'a>),
     Halt(Halt<'a>),
     Jmp(Jmp<'a, 'a>),
@@ -135,6 +143,22 @@ impl<'a> Instructions<'a> {
         match op_code {
             MOV_OPCODE => {
                 return Ok(Self::Mov(Mov::new(
+                    register,
+                    memory,
+                    argument,
+                    instruction_length,
+                )))
+            }
+            PUSH_OPCODE => {
+                return Ok(Self::Push(Push::new(
+                    register,
+                    memory,
+                    argument,
+                    instruction_length,
+                )))
+            }
+            POP_OPCODE => {
+                return Ok(Self::Pop(Pop::new(
                     register,
                     memory,
                     argument,
@@ -187,6 +211,8 @@ impl<'a> Instruction for Instructions<'a> {
     fn execute(&mut self) -> Result<(), InstructionError> {
         match self {
             Self::Mov(mov) => mov.execute(),
+            Self::Push(push) => push.execute(),
+            Self::Pop(pop) => pop.execute(),
             Self::Add(add) => add.execute(),
             Self::Sub(sub) => sub.execute(),
             Self::Halt(halt) => halt.execute(),
@@ -206,6 +232,8 @@ impl<'a> Instruction for Instructions<'a> {
     fn op_code(&self) -> u16 {
         match self {
             Self::Mov(mov) => mov.op_code(),
+            Self::Push(push) => push.op_code(),
+            Self::Pop(pop) => pop.op_code(),
             Self::Add(add) => add.op_code(),
             Self::Sub(sub) => sub.op_code(),
             Self::Halt(halt) => halt.op_code(),

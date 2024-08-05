@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -21,6 +21,20 @@ impl Add<usize> for Address {
 
     fn add(self, rhs: usize) -> Self::Output {
         Self::new(self.0 + rhs)
+    }
+}
+
+impl Sub<usize> for Address {
+    type Output = Address;
+
+    fn sub(self, rhs: usize) -> Self::Output {
+        Self::new(self.0 - rhs)
+    }
+}
+
+impl SubAssign<usize> for Address {
+    fn sub_assign(&mut self, rhs: usize) {
+        self.0 -= rhs;
     }
 }
 

@@ -1,9 +1,6 @@
 #![feature(test)]
 
-use craion::decoder::instruction::mov::MOV_REG2REG;
-use craion::decoder::instruction::{
-    ADD_OPCODE, CMP_OPCODE, INC_OPCODE, JACN_OPCODE, JMN_OPCODE, JMP_OPCODE, JMZ_OPCODE, MOV_OPCODE,
-};
+use craion::decoder::instruction::{INC_OPCODE, JACN_OPCODE};
 use craion::executor::registers::Registers;
 use craion::executor::{registers::RegisterFile, Executor};
 use craion::instruction_helper::InstructionHelper;

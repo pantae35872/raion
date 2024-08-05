@@ -1,13 +1,16 @@
 use crate::{
     decoder::argument::Argument,
     executor::registers::{RegisterFile, RegisterSizes},
-    memory::Memory,
+    memory::{address::Address, Memory},
 };
 
 use super::{Instruction, MOV_OPCODE};
 
 pub const MOV_REG2REG: u8 = 1;
 pub const MOV_REG2MEM: u8 = 2;
+pub const MOV_NUM2REG: u8 = 3;
+pub const MOV_ADD2SP: u8 = 4;
+pub const MOV_REG2SP: u8 = 5;
 
 pub struct Mov<'a, 'b> {
     register: &'a mut RegisterFile,
@@ -65,6 +68,29 @@ impl<'a, 'b> Instruction for Mov<'a, 'b> {
                     }
                     RegisterSizes::SizeBool => unreachable!(),
                 }
+            }
+            MOV_NUM2REG => {
+                let reg = self.argument.parse_register()?;
+                self.register.set_general(
+                    &reg,
+                    match reg.size() {
+                        RegisterSizes::SizeU8 => self.argument.parse_u8()?.into(),
+                        RegisterSizes::SizeU16 => self.argument.parse_u16()?.into(),
+                        RegisterSizes::SizeU32 => self.argument.parse_u32()?.into(),
+                        RegisterSizes::SizeU64 => self.argument.parse_u64()?.into(),
+                        RegisterSizes::SizeBool => 0,
+                    },
+                )?;
+            }
+            MOV_ADD2SP => {
+                self.register.set_sp(self.argument.parse_address()?);
+            }
+            MOV_REG2SP => {
+                self.register.set_sp(Address::new(
+                    self.register
+                        .get_general(&self.argument.parse_register()?)?
+                        as usize,
+                ));
             }
             invalid_subop_code => {
                 return Err(super::InstructionError::InvalidSubOpCode(
