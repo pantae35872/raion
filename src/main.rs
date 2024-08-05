@@ -1,73 +1,55 @@
 #![feature(test)]
 
-use decoder::instruction::{CMP_OPCODE, HALT_OPCODE, INC_OPCODE, JMP_OPCODE, JMZ_OPCODE};
-use executor::{registers::RegisterFile, Executor};
-use memory::{address::Address, argument_memory::ArgumentMemory};
+use craion::decoder::instruction::mov::MOV_REG2REG;
+use craion::decoder::instruction::{
+    ADD_OPCODE, CMP_OPCODE, INC_OPCODE, JMN_OPCODE, JMP_OPCODE, JMZ_OPCODE, MOV_OPCODE,
+};
+use craion::executor::registers::Registers;
+use craion::executor::{registers::RegisterFile, Executor};
+use craion::instruction_helper::InstructionHelper;
+use craion::memory::{address::Address, argument_memory::ArgumentMemory};
 
-use crate::memory::Memory;
+use craion::memory::{Memory, MemoryError};
 
-pub mod decoder;
-pub mod executor;
-pub mod memory;
+extern crate test;
+use test::Bencher;
+
+fn program(memory: &mut Memory) -> Result<(), MemoryError> {
+    InstructionHelper::new(memory)
+        .encode(INC_OPCODE, &[4])?
+        .encode(CMP_OPCODE, &[4, 12])?
+        .encode(JMN_OPCODE, &Address::new(0).get_raw().to_le_bytes())?
+        .halt()?;
+    return Ok(());
+}
 
 fn main() {
     let mut memory = Memory::new(64);
-    let mut instruction_count = 0;
-    let opcode = INC_OPCODE.to_le_bytes();
-    memory
-        .mem_sets(
-            Address::new(instruction_count),
-            &[4, opcode[0], opcode[1], 4],
-        )
-        .unwrap();
-    instruction_count += 4;
-    let opcode = CMP_OPCODE.to_le_bytes();
-    memory
-        .mem_sets(
-            Address::new(instruction_count),
-            &[5, opcode[0], opcode[1], 4, 12],
-        )
-        .unwrap();
-    instruction_count += 5;
-    let address = Address::new(instruction_count + 22).get_raw().to_le_bytes();
-    let opcode = JMZ_OPCODE.to_le_bytes();
-    memory
-        .mem_sets(
-            Address::new(instruction_count),
-            &[
-                11, opcode[0], opcode[1], address[0], address[1], address[2], address[3],
-                address[4], address[5], address[6], address[7],
-            ],
-        )
-        .unwrap();
-    instruction_count += 11;
-    let address = Address::new(0x0).get_raw().to_le_bytes();
-    let opcode = JMP_OPCODE.to_le_bytes();
-    memory
-        .mem_sets(
-            Address::new(instruction_count),
-            &[
-                11, opcode[0], opcode[1], address[0], address[1], address[2], address[3],
-                address[4], address[5], address[6], address[7],
-            ],
-        )
-        .unwrap();
-    instruction_count += 11;
-    let opcode = HALT_OPCODE.to_le_bytes();
-    memory
-        .mem_sets(Address::new(instruction_count), &[3, opcode[0], opcode[1]])
-        .unwrap();
+    program(&mut memory).unwrap();
     let mut register = RegisterFile::new();
-    register
-        .set_general(&executor::registers::Registers::A64, 0)
-        .unwrap();
-    register
-        .set_general(&executor::registers::Registers::B64, 1)
-        .unwrap();
-    register
-        .set_general(&executor::registers::Registers::C64, 1000000000)
-        .unwrap();
+    register.set_general(&Registers::A64, 0).unwrap();
+    register.set_general(&Registers::B64, 1).unwrap();
+    register.set_general(&Registers::C64, 1000000).unwrap();
     let mut argument_memory = ArgumentMemory::new();
     let mut executor = Executor::new(&mut memory, &mut register, &mut argument_memory);
     executor.execute();
+    drop(executor);
+    println!("{:?}", register);
+}
+
+#[bench]
+fn bench_simple_execute(b: &mut Bencher) {
+    let mut memory = Memory::new(64);
+    let mut argument_memory = ArgumentMemory::new();
+    let mut register = RegisterFile::new();
+    InstructionHelper::new(&mut memory)
+        .encode(ADD_OPCODE, &[4, 8])
+        .unwrap()
+        .halt()
+        .unwrap();
+    b.iter(|| {
+        let mut executor = Executor::new(&mut memory, &mut register, &mut argument_memory);
+        executor.execute();
+        register.set_ip(Address::new(0));
+    })
 }

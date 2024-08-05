@@ -78,8 +78,11 @@ impl Memory {
     /// # Examples
     ///
     /// ```
+    /// use craion::memory::Memory;
+    /// use craion::memory::address::Address;
     /// let memory = Memory::new(4);
-    /// assert_eq!(Ok(vec![0, 0, 0, 0].as_slice()), memory.mem_gets(0, 4));
+    ///
+    /// assert_eq!(Ok(vec![0, 0, 0, 0].as_slice()), memory.mem_gets(Address::new(0), 4));
     /// ```
     pub fn new(size: usize) -> Self {
         let mut memory = Vec::with_capacity(size);
@@ -94,6 +97,8 @@ impl Memory {
     /// # Examples
     ///
     /// ```
+    /// use craion::memory::Memory;
+    /// use craion::memory::address::Address;
     /// let mut memory = Memory::from(4);
     /// assert_eq!(Ok(1), memory.mem_set(Address::new(0), 1));
     /// assert_eq!(Ok(5), memory.mem_set(Address::new(1), 5));
@@ -116,6 +121,9 @@ impl Memory {
     /// # Examples
     ///
     /// ```
+    /// use craion::memory::Memory;
+    /// use craion::memory::address::Address;
+    /// use craion::memory::MemoryError;
     /// let mut memory = Memory::from(4);
     /// assert_eq!(Ok(vec![2, 1, 2, 3].as_slice()), memory.mem_sets(Address::new(0), &[2,1,2,3]));
     /// assert_eq!(Ok(vec![2, 1, 2, 3].as_slice()), memory.mem_gets(Address::new(0), 4));
@@ -147,6 +155,9 @@ impl Memory {
     /// # Examples
     ///
     /// ```
+    /// use craion::memory::Memory;
+    /// use craion::memory::address::Address;
+    /// use craion::memory::MemoryError;
     /// let memory = Memory::from(&[1, 2, 3, 4]);
     /// assert_eq!(Ok(2), memory.mem_get(Address::new(1)));
     /// assert_eq!(Ok(1), memory.mem_get(Address::new(0)));
@@ -167,11 +178,14 @@ impl Memory {
     /// # Examples
     ///
     /// ```
+    /// use craion::memory::Memory;
+    /// use craion::memory::address::Address;
+    /// use craion::memory::MemoryError;
     /// let memory = Memory::from(&[1, 2, 3, 4]);
     /// assert_eq!(Ok(vec![1, 2, 3, 4].as_slice()), memory.mem_gets(Address::new(0), 4));
     /// assert_eq!(Ok(vec![2, 3, 4].as_slice()), memory.mem_gets(Address::new(1), 3));
     /// assert_eq!(Err(MemoryError::OutOfRange(Address::new(1), 4)), memory.mem_gets(Address::new(1), 4));
-    /// ```)
+    /// ```
     pub fn mem_gets(&self, address: Address, size: usize) -> Result<&[u8], MemoryError> {
         let data = match self.data.get(address.get_raw()..address.get_raw() + size) {
             Some(data) => data,

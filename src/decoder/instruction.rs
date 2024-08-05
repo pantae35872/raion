@@ -26,7 +26,7 @@ mod inc;
 mod jmn;
 mod jmp;
 mod jmz;
-mod mov;
+pub mod mov;
 mod sub;
 
 //Memory releate instructions
