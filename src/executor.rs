@@ -43,9 +43,10 @@ impl<'a> Executor<'a> {
                     Ok(_) => {}
                     Err(e) => {
                         println!(
-                            "Error occur while executing instruction: {}, with opcode: {}",
+                            "Error occur while executing instruction: '{}', opcode: {}, instruction pointer: {}",
                             e,
-                            instruction.op_code()
+                            instruction.op_code(),
+                            self.register.get_ip()
                         );
                         return;
                     }

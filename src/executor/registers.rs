@@ -178,7 +178,7 @@ impl Display for RegisterFileError {
             ),
             RegisterFileError::GeneralUnsupportSet(register) => write!(
                 f,
-                "Trying to access a non-general purpose register using general purpose register function: {}",
+                "Trying to access a non-general purpose register using general purpose register function. register: '{}'",
                 register
             ),
         }

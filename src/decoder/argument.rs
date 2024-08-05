@@ -18,7 +18,7 @@ impl Display for ArgumentParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::OutOfRange(readpos) => {
-                write!(f, "Trying to read with invalid readpos: {}", readpos)
+                write!(f, "Not enough argument. with readpos: {}", readpos)
             }
             Self::RegisterParseError(parse_error) => write!(f, "{}", parse_error),
         }
