@@ -3,8 +3,10 @@ use std::{error::Error, fmt::Display};
 use cmp::Cmp;
 use inc::Inc;
 use jacc::Jacc;
+use jace::Jace;
 use jacn::Jacn;
 use jacz::Jacz;
+use jme::Jme;
 use jmn::Jmn;
 use jmp::Jmp;
 use jmz::Jmz;
@@ -118,6 +120,8 @@ pub enum Instructions<'a> {
     Jacn(Jacn<'a, 'a>),
     Jacz(Jacz<'a, 'a>),
     Jacc(Jacc<'a, 'a>),
+    Jace(Jace<'a, 'a>),
+    Jme(Jme<'a, 'a>),
 }
 
 impl<'a> Instructions<'a> {
@@ -164,6 +168,14 @@ impl<'a> Instructions<'a> {
                     instruction_length,
                 )))
             }
+            JACE_OPCODE => {
+                return Ok(Self::Jace(Jace::new(
+                    register,
+                    argument,
+                    instruction_length,
+                )))
+            }
+            JME_OPCODE => return Ok(Self::Jme(Jme::new(register, argument, instruction_length))),
             CMP_OPCODE => return Ok(Self::Cmp(Cmp::new(register, argument, instruction_length))),
             INC_OPCODE => return Ok(Self::Inc(Inc::new(register, argument, instruction_length))),
             iop_code => return Err(DecoderError::InvalidOpCode(iop_code)),
@@ -186,6 +198,8 @@ impl<'a> Instruction for Instructions<'a> {
             Self::Jacn(jacn) => jacn.execute(),
             Self::Jacz(jacz) => jacz.execute(),
             Self::Jacc(jacc) => jacc.execute(),
+            Self::Jme(jme) => jme.execute(),
+            Self::Jace(jace) => jace.execute(),
         }
     }
 
@@ -197,12 +211,14 @@ impl<'a> Instruction for Instructions<'a> {
             Self::Halt(halt) => halt.op_code(),
             Self::Jmp(jmp) => jmp.op_code(),
             Self::Jmn(jmn) => jmn.op_code(),
+            Self::Jme(jme) => jme.op_code(),
             Self::Jmz(jmz) => jmz.op_code(),
             Self::Cmp(cmp) => cmp.op_code(),
             Self::Inc(inc) => inc.op_code(),
             Self::Jacn(jacn) => jacn.op_code(),
             Self::Jacz(jacz) => jacz.op_code(),
             Self::Jacc(jacc) => jacc.op_code(),
+            Self::Jace(jace) => jace.op_code(),
         }
     }
 }
