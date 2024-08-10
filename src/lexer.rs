@@ -1,21 +1,29 @@
-use std::{error::Error, fmt::Display, str::FromStr};
+use std::{error::Error, fmt::Display, num::ParseIntError, str::FromStr};
 
 use crate::token::{ASMToken, InstructionType, RegisterType};
 
 #[derive(Debug)]
 pub enum LexerError {
     InvalidToken(String),
+    InvalidNumber(ParseIntError),
 }
 
 impl Display for LexerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidToken(buffer) => write!(f, "Trying to tokenize invalid input: {}", buffer),
+            Self::InvalidNumber(e) => write!(f, "Trying to tokenize invalid number, {}", e),
         }
     }
 }
 
 impl Error for LexerError {}
+
+impl From<ParseIntError> for LexerError {
+    fn from(value: ParseIntError) -> Self {
+        return Self::InvalidNumber(value);
+    }
+}
 
 pub struct Lexer<'a> {
     buffer: &'a str,
@@ -73,13 +81,26 @@ impl<'a> Lexer<'a> {
                     buffer.clear();
                     continue;
                 }
+
+                tokens.push(ASMToken::ToLabel(buffer.clone()));
+                buffer.clear();
+                continue;
             }
             if value.is_digit(10) {
                 buffer.push(self.consume().unwrap());
-                while self.peek(0).is_some_and(|e| e.is_digit(10)) {
+                if value == '0' && self.peek(0).is_some_and(|e| e == 'x') {
+                    self.consume();
+                    while self.peek(0).is_some_and(|e| e.is_digit(16)) {
+                        buffer.push(self.consume().unwrap());
+                    }
+                    tokens.push(ASMToken::Number(u64::from_str_radix(&buffer, 16)?));
+                    buffer.clear();
+                    continue;
+                }
+                while self.peek(0).is_some_and(|e| e.is_digit(16)) {
                     buffer.push(self.consume().unwrap());
                 }
-                tokens.push(ASMToken::Number(buffer.parse::<u64>().unwrap()));
+                tokens.push(ASMToken::Number(buffer.parse::<u64>()?));
                 buffer.clear();
                 continue;
             }
@@ -93,10 +114,19 @@ impl<'a> Lexer<'a> {
                 tokens.push(ASMToken::NewLine);
                 continue;
             }
+            if value == ';' {
+                self.consume();
+                while self.peek(0).is_some_and(|e| e != '\n') {
+                    self.consume();
+                }
+                self.consume();
+                continue;
+            }
             if value.is_whitespace() {
                 self.consume();
                 continue;
             }
+            buffer.push(self.consume().unwrap());
             return Err(LexerError::InvalidToken(buffer));
         }
         return Ok(tokens);
