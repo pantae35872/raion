@@ -119,7 +119,6 @@ impl<'a> Lexer<'a> {
                 while self.peek(0).is_some_and(|e| e != '\n') {
                     self.consume();
                 }
-                self.consume();
                 continue;
             }
             if value.is_whitespace() {

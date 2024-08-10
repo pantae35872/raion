@@ -245,6 +245,7 @@ impl ASMCompiler {
                         self.consume();
                     }
                 },
+                ASMToken::NewLine => {}
                 _ => return Err(CompilerError::UnexpectedToken(token.clone())),
             }
             if self.peek(0).is_some_and(|e| *e == ASMToken::NewLine) {
