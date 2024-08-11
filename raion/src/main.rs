@@ -13,5 +13,8 @@ fn main() {
     file.read_to_string(&mut abc).unwrap();
     let lexer = Lexer::new(&abc);
     let compiler = ASMCompiler::new(lexer.tokenize_asm().expect("Cannot parse"));
-    println!("{:?}", compiler.compile());
+    match compiler.compile() {
+        Ok(result) => println!("{:?}", result),
+        Err(er) => println!("{}", er),
+    }
 }

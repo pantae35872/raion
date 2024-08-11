@@ -7,22 +7,34 @@ use crate::token::{
 
 #[derive(Debug)]
 pub enum CompilerError {
-    UnexpectedToken(ASMToken),
+    UnexpectedToken(ASMToken, usize),
     TokenNotFound,
-    UndefinedLabel(String),
+    UndefinedLabel(String, usize),
+    MultipleLabel(String, usize),
 }
 
 impl Display for CompilerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnexpectedToken(token) => {
-                write!(f, "Trying to compile with unexpected token {}", token)
+            Self::UnexpectedToken(token, line) => {
+                write!(
+                    f,
+                    "Trying to compile with unexpected token `{}` at line {}",
+                    token, line
+                )
             }
             Self::TokenNotFound => {
                 write!(f, "No token found where one was expected.")
             }
-            Self::UndefinedLabel(label) => {
-                write!(f, "Undefied label: {}", label)
+            Self::UndefinedLabel(label, line) => {
+                write!(f, "Undefied label `{}` at line {}", label, line)
+            }
+            Self::MultipleLabel(label, line) => {
+                write!(
+                    f,
+                    "the label name `{}` is defined multiple times at line {}",
+                    label, line
+                )
             }
         }
     }
@@ -35,8 +47,9 @@ pub struct ASMCompiler {
     write_pos: usize,
     index: usize,
     labels: HashMap<String, usize>,
-    label_replaces: Vec<(String, usize)>,
+    label_replaces: Vec<(String, usize, usize)>,
     byte_codes: Vec<u8>,
+    line: usize,
 }
 
 impl ASMCompiler {
@@ -48,6 +61,7 @@ impl ASMCompiler {
             labels: HashMap::new(),
             label_replaces: Vec::new(),
             byte_codes: Vec::new(),
+            line: 1,
         }
     }
 
@@ -80,7 +94,7 @@ impl ASMCompiler {
             ASMToken::Register(register) => {
                 let token = self.peek(2).ok_or(CompilerError::TokenNotFound)?;
                 if *token != ASMToken::Comma {
-                    return Err(CompilerError::UnexpectedToken(token.clone()));
+                    return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
                 }
 
                 match self.peek(3).ok_or(CompilerError::TokenNotFound)? {
@@ -109,25 +123,25 @@ impl ASMCompiler {
                             self.write_instruction(instruction_opcode, &arg);
                         }
                     }
-                    token => return Err(CompilerError::UnexpectedToken(token.clone())),
+                    token => return Err(CompilerError::UnexpectedToken(token.clone(), self.line)),
                 };
             }
             ASMToken::Number(address) => {
                 let token = self.peek(2).ok_or(CompilerError::TokenNotFound)?;
                 if *token != ASMToken::Comma {
-                    return Err(CompilerError::UnexpectedToken(token.clone()));
+                    return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
                 }
 
                 let register1 = match self.peek(3).ok_or(CompilerError::TokenNotFound)? {
                     ASMToken::Register(reg) => reg,
-                    token => return Err(CompilerError::UnexpectedToken(token.clone())),
+                    token => return Err(CompilerError::UnexpectedToken(token.clone(), self.line)),
                 };
                 let mut arg = [MOV_REG2MEM].to_vec();
                 arg.extend_from_slice(&address.to_le_bytes());
                 arg.push(register1.to_byte());
                 self.write_instruction(instruction_opcode, &arg);
             }
-            token => return Err(CompilerError::UnexpectedToken(token.clone())),
+            token => return Err(CompilerError::UnexpectedToken(token.clone(), self.line)),
         };
 
         self.consume();
@@ -138,22 +152,24 @@ impl ASMCompiler {
     }
 
     fn replace_labels(&mut self) -> Result<(), CompilerError> {
-        for (label, pos) in &self.label_replaces {
+        for (label, pos, line) in &self.label_replaces {
             let data = &mut self.byte_codes[*pos..(*pos + 8)];
             let label_data = self
                 .labels
                 .get(label)
-                .ok_or(CompilerError::UndefinedLabel(label.clone()))?;
+                .ok_or(CompilerError::UndefinedLabel(label.clone(), *line))?;
             data.copy_from_slice(&(*label_data as u64).to_le_bytes());
         }
         return Ok(());
     }
 
     pub fn compile(mut self) -> Result<Vec<u8>, CompilerError> {
-        while let Some(token) = self.peek(0) {
+        while let Some(token) = self.peek(0).cloned() {
             match token {
                 ASMToken::Label(label) => {
-                    self.labels.insert(label.clone(), self.write_pos);
+                    if let Some(_) = self.labels.insert(label.clone(), self.write_pos) {
+                        return Err(CompilerError::MultipleLabel(label.clone(), self.line));
+                    }
                     self.consume();
                 }
                 ASMToken::Instruction(instruction) => match instruction {
@@ -161,7 +177,12 @@ impl ASMCompiler {
                     InstructionType::Inc | InstructionType::Pop | InstructionType::Push => {
                         let register = match self.peek(1).ok_or(CompilerError::TokenNotFound)? {
                             ASMToken::Register(reg) => reg,
-                            token => return Err(CompilerError::UnexpectedToken(token.clone())),
+                            token => {
+                                return Err(CompilerError::UnexpectedToken(
+                                    token.clone(),
+                                    self.line,
+                                ))
+                            }
                         };
                         self.write_instruction(instruction.opcode(), &[register.to_byte()]);
                         self.consume();
@@ -170,15 +191,25 @@ impl ASMCompiler {
                     InstructionType::Cmp | InstructionType::Add | InstructionType::Sub => {
                         let register = match self.peek(1).ok_or(CompilerError::TokenNotFound)? {
                             ASMToken::Register(reg) => reg,
-                            token => return Err(CompilerError::UnexpectedToken(token.clone())),
+                            token => {
+                                return Err(CompilerError::UnexpectedToken(
+                                    token.clone(),
+                                    self.line,
+                                ))
+                            }
                         };
                         let token = self.peek(2).ok_or(CompilerError::TokenNotFound)?;
                         if *token != ASMToken::Comma {
-                            return Err(CompilerError::UnexpectedToken(token.clone()));
+                            return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
                         }
                         let register1 = match self.peek(3).ok_or(CompilerError::TokenNotFound)? {
                             ASMToken::Register(reg) => reg,
-                            token => return Err(CompilerError::UnexpectedToken(token.clone())),
+                            token => {
+                                return Err(CompilerError::UnexpectedToken(
+                                    token.clone(),
+                                    self.line,
+                                ))
+                            }
                         };
                         self.write_instruction(
                             instruction.opcode(),
@@ -195,29 +226,44 @@ impl ASMCompiler {
                     | InstructionType::Jacz => {
                         let register = match self.peek(1).ok_or(CompilerError::TokenNotFound)? {
                             ASMToken::Register(reg) => reg,
-                            token => return Err(CompilerError::UnexpectedToken(token.clone())),
+                            token => {
+                                return Err(CompilerError::UnexpectedToken(
+                                    token.clone(),
+                                    self.line,
+                                ))
+                            }
                         };
                         let token = self.peek(2).ok_or(CompilerError::TokenNotFound)?;
                         if *token != ASMToken::Comma {
-                            return Err(CompilerError::UnexpectedToken(token.clone()));
+                            return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
                         }
                         let register1 = match self.peek(3).ok_or(CompilerError::TokenNotFound)? {
                             ASMToken::Register(reg) => reg,
-                            token => return Err(CompilerError::UnexpectedToken(token.clone())),
+                            token => {
+                                return Err(CompilerError::UnexpectedToken(
+                                    token.clone(),
+                                    self.line,
+                                ))
+                            }
                         };
                         let token = self.peek(4).ok_or(CompilerError::TokenNotFound)?;
                         if *token != ASMToken::Comma {
-                            return Err(CompilerError::UnexpectedToken(token.clone()));
+                            return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
                         }
                         let mut arg = [register.to_byte(), register1.to_byte()].to_vec();
                         arg.extend_from_slice(&0u64.to_le_bytes());
                         self.write_instruction(instruction.opcode(), &arg);
                         let label = match self.peek(5).ok_or(CompilerError::TokenNotFound)? {
                             ASMToken::ToLabel(label) => label,
-                            token => return Err(CompilerError::UnexpectedToken(token.clone())),
+                            token => {
+                                return Err(CompilerError::UnexpectedToken(
+                                    token.clone(),
+                                    self.line,
+                                ))
+                            }
                         };
                         self.label_replaces
-                            .push((label.clone(), self.write_pos - 8));
+                            .push((label.clone(), self.write_pos - 8, self.line));
                         self.consume();
                         self.consume();
                         self.consume();
@@ -233,10 +279,15 @@ impl ASMCompiler {
                         self.write_instruction(instruction.opcode(), &0u64.to_le_bytes());
                         let label = match self.peek(1).ok_or(CompilerError::TokenNotFound)? {
                             ASMToken::ToLabel(label) => label,
-                            token => return Err(CompilerError::UnexpectedToken(token.clone())),
+                            token => {
+                                return Err(CompilerError::UnexpectedToken(
+                                    token.clone(),
+                                    self.line,
+                                ))
+                            }
                         };
                         self.label_replaces
-                            .push((label.clone(), self.write_pos - 8));
+                            .push((label.clone(), self.write_pos - 8, self.line));
                         self.consume();
                         self.consume();
                     }
@@ -246,16 +297,19 @@ impl ASMCompiler {
                     }
                 },
                 ASMToken::NewLine => {}
-                _ => return Err(CompilerError::UnexpectedToken(token.clone())),
+                _ => return Err(CompilerError::UnexpectedToken(token.clone(), self.line)),
             }
             if self.peek(0).is_some_and(|e| *e == ASMToken::NewLine) {
                 self.consume();
             } else {
                 match self.peek(0) {
-                    Some(token) => return Err(CompilerError::UnexpectedToken(token.clone())),
+                    Some(token) => {
+                        return Err(CompilerError::UnexpectedToken(token.clone(), self.line))
+                    }
                     None => {}
                 }
             }
+            self.line += 1;
         }
         self.replace_labels()?;
         return Ok(self.byte_codes);
