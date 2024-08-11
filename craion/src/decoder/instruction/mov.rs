@@ -1,16 +1,14 @@
+use common::constants::{
+    MOV_ADD2SP, MOV_NUM2REG, MOV_OPCODE, MOV_REG2MEM, MOV_REG2REG, MOV_REG2SP,
+};
+
 use crate::{
     decoder::argument::Argument,
     executor::registers::{RegisterFile, RegisterSizes},
     memory::{address::Address, Memory},
 };
 
-use super::{Instruction, MOV_OPCODE};
-
-pub const MOV_REG2REG: u8 = 1;
-pub const MOV_REG2MEM: u8 = 2;
-pub const MOV_NUM2REG: u8 = 3;
-pub const MOV_ADD2SP: u8 = 4;
-pub const MOV_REG2SP: u8 = 5;
+use super::Instruction;
 
 pub struct Mov<'a, 'b> {
     register: &'a mut RegisterFile,

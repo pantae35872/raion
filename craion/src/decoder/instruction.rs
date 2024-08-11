@@ -1,6 +1,11 @@
 use std::{error::Error, fmt::Display};
 
 use cmp::Cmp;
+use common::constants::{
+    ADD_OPCODE, CMP_OPCODE, HALT_OPCODE, INC_OPCODE, JACC_OPCODE, JACE_OPCODE, JACN_OPCODE,
+    JACZ_OPCODE, JMC_OPCODE, JME_OPCODE, JMN_OPCODE, JMP_OPCODE, JMZ_OPCODE, MOV_OPCODE,
+    POP_OPCODE, PUSH_OPCODE, SUB_OPCODE,
+};
 use inc::Inc;
 use jacc::Jacc;
 use jace::Jace;
@@ -44,28 +49,6 @@ pub mod mov;
 mod pop;
 mod push;
 mod sub;
-
-//Memory releate instructions
-pub const MOV_OPCODE: u16 = 16;
-pub const PUSH_OPCODE: u16 = 17;
-pub const POP_OPCODE: u16 = 18;
-//Arithmetic instructions
-pub const INC_OPCODE: u16 = 30;
-pub const CMP_OPCODE: u16 = 31;
-pub const ADD_OPCODE: u16 = 32;
-pub const SUB_OPCODE: u16 = 33;
-//Branching instructions
-pub const JMP_OPCODE: u16 = 64;
-pub const JMZ_OPCODE: u16 = 65;
-pub const JMN_OPCODE: u16 = 66;
-pub const JACN_OPCODE: u16 = 67;
-pub const JACZ_OPCODE: u16 = 68;
-pub const JACC_OPCODE: u16 = 69;
-pub const JACE_OPCODE: u16 = 70;
-pub const JME_OPCODE: u16 = 71;
-pub const JMC_OPCODE: u16 = 72;
-//Cpu state releate instructions
-pub const HALT_OPCODE: u16 = 65535;
 
 #[derive(Debug)]
 pub enum InstructionError {

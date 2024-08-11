@@ -1,9 +1,8 @@
 use std::{collections::HashMap, error::Error, fmt::Display};
 
-use crate::token::{
-    ASMToken, InstructionType, RegisterType, MOV_ADD2SP, MOV_NUM2REG, MOV_REG2MEM, MOV_REG2REG,
-    MOV_REG2SP,
-};
+use common::constants::{MOV_ADD2SP, MOV_NUM2REG, MOV_REG2MEM, MOV_REG2REG, MOV_REG2SP};
+
+use crate::token::{ASMToken, InstructionType, RegisterType};
 
 #[derive(Debug)]
 pub enum CompilerError {

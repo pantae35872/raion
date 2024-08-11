@@ -1,7 +1,6 @@
-use crate::{
-    decoder::instruction::HALT_OPCODE,
-    memory::{address::Address, Memory, MemoryError},
-};
+use common::constants::HALT_OPCODE;
+
+use crate::memory::{address::Address, Memory, MemoryError};
 
 pub struct InstructionHelper<'a> {
     memory: &'a mut Memory,

@@ -1,10 +1,5 @@
 use std::{fmt::Display, str::FromStr};
 
-pub const MOV_REG2REG: u8 = 1;
-pub const MOV_REG2MEM: u8 = 2;
-pub const MOV_NUM2REG: u8 = 3;
-pub const MOV_ADD2SP: u8 = 4;
-pub const MOV_REG2SP: u8 = 5;
 #[derive(Debug, Clone, PartialEq)]
 pub enum InstructionType {
     Add,

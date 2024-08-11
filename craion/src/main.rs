@@ -1,9 +1,6 @@
 #![feature(test)]
 
-use craion::decoder::instruction::{INC_OPCODE, JACN_OPCODE};
-use craion::executor::registers::Registers;
 use craion::executor::{registers::RegisterFile, Executor};
-use craion::instruction_helper::InstructionHelper;
 use craion::memory::{address::Address, argument_memory::ArgumentMemory};
 
 use craion::memory::{Memory, MemoryError};

@@ -1,6 +1,8 @@
+use common::constants::ADD_OPCODE;
+
 use crate::{decoder::argument::Argument, executor::registers::RegisterFile};
 
-use super::{Instruction, ADD_OPCODE};
+use super::Instruction;
 
 pub struct Add<'a, 'b> {
     register: &'a mut RegisterFile,
