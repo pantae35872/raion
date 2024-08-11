@@ -6,6 +6,7 @@ use jacc::Jacc;
 use jace::Jace;
 use jacn::Jacn;
 use jacz::Jacz;
+use jmc::Jmc;
 use jme::Jme;
 use jmn::Jmn;
 use jmp::Jmp;
@@ -34,6 +35,7 @@ mod jacc;
 mod jace;
 mod jacn;
 mod jacz;
+mod jmc;
 mod jme;
 mod jmn;
 mod jmp;
@@ -61,6 +63,7 @@ pub const JACZ_OPCODE: u16 = 68;
 pub const JACC_OPCODE: u16 = 69;
 pub const JACE_OPCODE: u16 = 70;
 pub const JME_OPCODE: u16 = 71;
+pub const JMC_OPCODE: u16 = 72;
 //Cpu state releate instructions
 pub const HALT_OPCODE: u16 = 65535;
 
@@ -130,6 +133,7 @@ pub enum Instructions<'a> {
     Jacc(Jacc<'a, 'a>),
     Jace(Jace<'a, 'a>),
     Jme(Jme<'a, 'a>),
+    Jmc(Jmc<'a, 'a>),
 }
 
 impl<'a> Instructions<'a> {
@@ -171,6 +175,7 @@ impl<'a> Instructions<'a> {
             JMP_OPCODE => return Ok(Self::Jmp(Jmp::new(register, argument))),
             JMN_OPCODE => return Ok(Self::Jmn(Jmn::new(register, argument, instruction_length))),
             JMZ_OPCODE => return Ok(Self::Jmz(Jmz::new(register, argument, instruction_length))),
+            JMC_OPCODE => return Ok(Self::Jmc(Jmc::new(register, argument, instruction_length))),
             JACN_OPCODE => {
                 return Ok(Self::Jacn(Jacn::new(
                     register,
@@ -218,6 +223,7 @@ impl<'a> Instruction for Instructions<'a> {
             Self::Halt(halt) => halt.execute(),
             Self::Jmp(jmp) => jmp.execute(),
             Self::Jmn(jmn) => jmn.execute(),
+            Self::Jmc(jmc) => jmc.execute(),
             Self::Jmz(jmz) => jmz.execute(),
             Self::Cmp(cmp) => cmp.execute(),
             Self::Inc(inc) => inc.execute(),
@@ -241,6 +247,7 @@ impl<'a> Instruction for Instructions<'a> {
             Self::Jmn(jmn) => jmn.op_code(),
             Self::Jme(jme) => jme.op_code(),
             Self::Jmz(jmz) => jmz.op_code(),
+            Self::Jmc(jmc) => jmc.op_code(),
             Self::Cmp(cmp) => cmp.op_code(),
             Self::Inc(inc) => inc.op_code(),
             Self::Jacn(jacn) => jacn.op_code(),

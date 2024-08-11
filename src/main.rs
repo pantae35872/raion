@@ -11,22 +11,20 @@ use craion::memory::{Memory, MemoryError};
 extern crate test;
 
 fn program(memory: &mut Memory) -> Result<(), MemoryError> {
-    let mut arg = [4, 12].to_vec();
-    arg.extend_from_slice(&Address::new(0).get_raw().to_le_bytes());
-    InstructionHelper::new(memory)
-        .encode(INC_OPCODE, &[4])?
-        .encode(JACN_OPCODE, &arg)?
-        .halt()?;
+    memory.mem_sets(
+        Address::new(0),
+        &[
+            13, 16, 0, 3, 8, 0, 202, 154, 59, 0, 0, 0, 0, 12, 16, 0, 4, 254, 255, 0, 0, 0, 0, 0, 0,
+            4, 17, 0, 8, 13, 16, 0, 3, 8, 254, 0, 0, 0, 0, 0, 0, 0, 4, 18, 0, 8, 3, 255, 255,
+        ],
+    )?;
     return Ok(());
 }
 
 fn main() {
-    let mut memory = Memory::new(64);
+    let mut memory = Memory::new(0xFFFF);
     program(&mut memory).unwrap();
     let mut register = RegisterFile::new();
-    register.set_general(&Registers::A64, 0).unwrap();
-    register.set_general(&Registers::B64, 1).unwrap();
-    register.set_general(&Registers::C64, 1000000).unwrap();
     let mut argument_memory = ArgumentMemory::new();
     let mut executor = Executor::new(&mut memory, &mut register, &mut argument_memory);
     executor.execute();

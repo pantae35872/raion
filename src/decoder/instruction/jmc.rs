@@ -1,14 +1,14 @@
 use crate::{decoder::argument::Argument, executor::registers::RegisterFile};
 
-use super::{Instruction, JMN_OPCODE};
+use super::{Instruction, JMC_OPCODE};
 
-pub struct Jmn<'a, 'b> {
+pub struct Jmc<'a, 'b> {
     register: &'a mut RegisterFile,
     argument: Argument<'b>,
     instruction_length: usize,
 }
 
-impl<'a, 'b> Jmn<'a, 'b> {
+impl<'a, 'b> Jmc<'a, 'b> {
     pub fn new(
         register: &'a mut RegisterFile,
         argument: Argument<'b>,
@@ -22,9 +22,9 @@ impl<'a, 'b> Jmn<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Instruction for Jmn<'a, 'b> {
+impl<'a, 'b> Instruction for Jmc<'a, 'b> {
     fn execute(&mut self) -> Result<(), super::InstructionError> {
-        if self.register.get_negative() {
+        if self.register.get_carry() {
             self.register.set_ip(self.argument.parse_address()?);
         } else {
             self.register.inc_ip(self.instruction_length);
@@ -33,6 +33,6 @@ impl<'a, 'b> Instruction for Jmn<'a, 'b> {
     }
 
     fn op_code(&self) -> u16 {
-        return JMN_OPCODE;
+        return JMC_OPCODE;
     }
 }
