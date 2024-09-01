@@ -1,0 +1,8 @@
+[workspace]
+resolver = "1"
+
+members = [
+  "common",
+  "craion",
+  "raion",
+]

@@ -263,10 +263,7 @@ impl RegisterFile {
                 }
             }
             Registers::A64 | Registers::B64 | Registers::C64 | Registers::D64 => {
-                match <u64>::try_from(data) {
-                    Ok(_) => unsafe { self.set(register, data) },
-                    Err(_) => return Err(RegisterFileError::SetError(register.clone(), data)),
-                }
+                unsafe { self.set(register, data) };
             }
             ur => return Err(RegisterFileError::GeneralUnsupportSet(ur.clone())),
         };
