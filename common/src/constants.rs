@@ -23,6 +23,9 @@ pub const JMC_OPCODE: u16 = 72;
 //Cpu state releate instructions
 pub const HALT_OPCODE: u16 = 65535;
 
+// IO instructions
+pub const OUTC: u16 = 128;
+
 //Mov sub instructions
 pub const MOV_REG2REG: u8 = 1;
 pub const MOV_REG2MEM: u8 = 2;

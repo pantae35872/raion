@@ -203,7 +203,10 @@ impl ASMCompiler {
                 }
                 ASMToken::Instruction(instruction) => match instruction {
                     InstructionType::Mov => self.compile_mov(instruction.opcode())?,
-                    InstructionType::Inc | InstructionType::Pop | InstructionType::Push => {
+                    InstructionType::Inc
+                    | InstructionType::Pop
+                    | InstructionType::Push
+                    | InstructionType::Outc => {
                         let register = match self
                             .peek(1)
                             .ok_or(CompilerError::UnexpectedToken(None, self.line))?

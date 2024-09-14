@@ -3,9 +3,11 @@ use std::{
     fmt::{Debug, Display},
 };
 
+use common::memory::buffer_reader::BufferReader;
+
 use crate::{
     executor::registers::{RegisterParseError, Registers},
-    memory::{address::Address, buffer_reader::BufferReader},
+    memory::address::Address,
 };
 
 #[derive(Debug)]

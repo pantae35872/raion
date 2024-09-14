@@ -41,7 +41,6 @@ struct VariableArgs {
 
 impl Parse for VariableArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // Parse a list of identifiers separated by commas
         let identifiers = input.parse_terminated(Ident::parse, Token![,])?;
 
         Ok(VariableArgs { identifiers })

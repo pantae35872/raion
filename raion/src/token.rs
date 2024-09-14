@@ -5,6 +5,7 @@ pub enum InstructionType {
     Add,
     Cmp,
     Halt,
+    Outc,
     Inc,
     Sub,
     Push,
@@ -63,6 +64,7 @@ impl InstructionType {
             Self::Jace => return 70,
             Self::Jme => return 71,
             Self::Jmc => return 72,
+            Self::Outc => return 128,
             Self::Halt => return 65535,
         }
     }
@@ -169,6 +171,7 @@ impl FromStr for InstructionType {
             "jace" => return Ok(Self::Jace),
             "jacn" => return Ok(Self::Jacn),
             "jacz" => return Ok(Self::Jacz),
+            "outc" => return Ok(Self::Outc),
             "halt" => return Ok(Self::Halt),
             _ => return Err(FailToParseFromString),
         }
@@ -193,6 +196,7 @@ impl Display for InstructionType {
             Self::Jacc => write!(f, "jacc"),
             Self::Jace => write!(f, "jace"),
             Self::Jacn => write!(f, "jacn"),
+            Self::Outc => write!(f, "outc"),
             Self::Halt => write!(f, "halt"),
             Self::Sub => write!(f, "sub"),
         }

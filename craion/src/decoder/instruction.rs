@@ -31,6 +31,7 @@ mod jmn;
 mod jmp;
 mod jmz;
 pub mod mov;
+mod outc;
 mod pop;
 mod push;
 mod sub;
@@ -40,6 +41,7 @@ pub enum InstructionError {
     ArgumentParseError(ArgumentParseError),
     RegisterFileError(RegisterFileError),
     AccessingMemoryError(MemoryError),
+    InvalidUTF8,
     InvalidSubOpCode(u16, u8),
 }
 
@@ -54,6 +56,9 @@ impl Display for InstructionError {
                     "An instruction trying to access memory with error '{}'",
                     memory_e
                 )
+            }
+            Self::InvalidUTF8 => {
+                write!(f, "Invalid UTF8")
             }
             Self::InvalidSubOpCode(mainopcode, subopcode) => write!(
                 f,

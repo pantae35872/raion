@@ -1,9 +1,30 @@
 start:
   mov sp, 0xFFFE
-  mov a64, 0
-  mov b64, 1000000000
-loop:
-  inc a64
-  jacn a64, b64, loop
+  mov a8, 0x48 
+  outc a8
+  mov a8, 0x65
+  outc a8
+  mov a8, 0x6C
+  outc a8
+  mov a8, 0x6C
+  outc a8
+  mov a8, 0x6F
+  outc a8
+  mov a8, 0x20
+  outc a8
+  mov a8, 0x57
+  outc a8
+  mov a8, 0x6F
+  outc a8
+  mov a8, 0x72
+  outc a8
+  mov a8, 0x6C
+  outc a8
+  mov a8, 0x64
+  outc a8
+  mov a8, 0x21
+  outc a8
+  mov a8, 0x0A
+  outc a8
 end:
   halt
