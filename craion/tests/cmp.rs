@@ -1,5 +1,5 @@
+use common::constants::CMP_OPCODE;
 use craion::{
-    decoder::instruction::CMP_OPCODE,
     executor::{
         registers::{RegisterFile, Registers},
         Executor,

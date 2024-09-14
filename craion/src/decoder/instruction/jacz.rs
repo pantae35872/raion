@@ -1,43 +1,18 @@
-use crate::{decoder::argument::Argument, executor::registers::RegisterFile};
+use proc::instruction;
 
-use super::{Instruction, JACZ_OPCODE};
+use super::InstructionArgument;
 
-pub struct Jacz<'a, 'b> {
-    register: &'a mut RegisterFile,
-    argument: Argument<'b>,
-    instruction_length: usize,
-}
-
-impl<'a, 'b> Jacz<'a, 'b> {
-    pub fn new(
-        register: &'a mut RegisterFile,
-        argument: Argument<'b>,
-        instruction_length: usize,
-    ) -> Self {
-        Self {
-            register,
-            argument,
-            instruction_length,
-        }
+#[instruction(JACZ_OPCODE)]
+pub fn jacz(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
+    let reg1 = args.argument.parse_register()?;
+    let reg2 = args.argument.parse_register()?;
+    let n_reg1 = args.register.get_general(&reg1)?;
+    let n_reg2 = args.register.get_general(&reg2)?;
+    let (result, _) = n_reg1.overflowing_sub(n_reg2);
+    if result == 0 {
+        args.register.set_ip(args.argument.parse_address()?);
+    } else {
+        args.register.inc_ip(args.instruction_length);
     }
-}
-
-impl<'a, 'b> Instruction for Jacz<'a, 'b> {
-    fn execute(&mut self) -> Result<(), super::InstructionError> {
-        let reg1 = self.argument.parse_register()?;
-        let reg2 = self.argument.parse_register()?;
-        let n_reg1 = self.register.get_general(&reg1)?;
-        let n_reg2 = self.register.get_general(&reg2)?;
-        let (result, _) = n_reg1.overflowing_sub(n_reg2);
-        if result == 0 {
-            self.register.set_ip(self.argument.parse_address()?);
-        } else {
-            self.register.inc_ip(self.instruction_length);
-        }
-        return Ok(());
-    }
-
-    fn op_code(&self) -> u16 {
-        return JACZ_OPCODE;
-    }
+    return Ok(());
 }

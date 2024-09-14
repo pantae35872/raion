@@ -1,29 +1,10 @@
-use crate::executor::registers::RegisterFile;
+use proc::instruction;
 
-use super::{Instruction, HALT_OPCODE};
+use super::InstructionArgument;
 
-pub struct Halt<'a> {
-    register: &'a mut RegisterFile,
-    instruction_length: usize,
-}
-
-impl<'a> Halt<'a> {
-    pub fn new(register: &'a mut RegisterFile, instruction_length: usize) -> Self {
-        Self {
-            register,
-            instruction_length,
-        }
-    }
-}
-
-impl<'a> Instruction for Halt<'a> {
-    fn execute(&mut self) -> Result<(), super::InstructionError> {
-        self.register.inc_ip(self.instruction_length);
-        self.register.set_halt(true);
-        return Ok(());
-    }
-
-    fn op_code(&self) -> u16 {
-        return HALT_OPCODE;
-    }
+#[instruction(HALT_OPCODE)]
+pub fn halt(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
+    args.register.inc_ip(args.instruction_length);
+    args.register.set_halt(true);
+    return Ok(());
 }

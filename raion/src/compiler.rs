@@ -6,8 +6,7 @@ use crate::token::{ASMToken, InstructionType, RegisterType};
 
 #[derive(Debug)]
 pub enum CompilerError {
-    UnexpectedToken(ASMToken, usize),
-    TokenNotFound,
+    UnexpectedToken(Option<ASMToken>, usize),
     UndefinedLabel(String, usize),
     MultipleLabel(String, usize),
 }
@@ -18,12 +17,9 @@ impl Display for CompilerError {
             Self::UnexpectedToken(token, line) => {
                 write!(
                     f,
-                    "Trying to compile with unexpected token `{}` at line {}",
+                    "Trying to compile with unexpected token `{:?}` at line {}",
                     token, line
                 )
-            }
-            Self::TokenNotFound => {
-                write!(f, "No token found where one was expected.")
             }
             Self::UndefinedLabel(label, line) => {
                 write!(f, "Undefied label `{}` at line {}", label, line)
@@ -89,14 +85,25 @@ impl ASMCompiler {
     }
 
     fn compile_mov(&mut self, instruction_opcode: u16) -> Result<(), CompilerError> {
-        match self.peek(1).ok_or(CompilerError::TokenNotFound)? {
+        match self
+            .peek(1)
+            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+        {
             ASMToken::Register(register) => {
-                let token = self.peek(2).ok_or(CompilerError::TokenNotFound)?;
+                let token = self
+                    .peek(2)
+                    .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
                 if *token != ASMToken::Comma {
-                    return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
+                    return Err(CompilerError::UnexpectedToken(
+                        token.clone().into(),
+                        self.line,
+                    ));
                 }
 
-                match self.peek(3).ok_or(CompilerError::TokenNotFound)? {
+                match self
+                    .peek(3)
+                    .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                {
                     ASMToken::Register(register1) => {
                         if *register == RegisterType::SP {
                             self.write_instruction(
@@ -122,25 +129,48 @@ impl ASMCompiler {
                             self.write_instruction(instruction_opcode, &arg);
                         }
                     }
-                    token => return Err(CompilerError::UnexpectedToken(token.clone(), self.line)),
+                    token => {
+                        return Err(CompilerError::UnexpectedToken(
+                            token.clone().into(),
+                            self.line,
+                        ))
+                    }
                 };
             }
             ASMToken::Number(address) => {
-                let token = self.peek(2).ok_or(CompilerError::TokenNotFound)?;
+                let token = self
+                    .peek(2)
+                    .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
                 if *token != ASMToken::Comma {
-                    return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
+                    return Err(CompilerError::UnexpectedToken(
+                        token.clone().into(),
+                        self.line,
+                    ));
                 }
 
-                let register1 = match self.peek(3).ok_or(CompilerError::TokenNotFound)? {
+                let register1 = match self
+                    .peek(3)
+                    .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                {
                     ASMToken::Register(reg) => reg,
-                    token => return Err(CompilerError::UnexpectedToken(token.clone(), self.line)),
+                    token => {
+                        return Err(CompilerError::UnexpectedToken(
+                            token.clone().into(),
+                            self.line,
+                        ))
+                    }
                 };
                 let mut arg = [MOV_REG2MEM].to_vec();
                 arg.extend_from_slice(&address.to_le_bytes());
                 arg.push(register1.to_byte());
                 self.write_instruction(instruction_opcode, &arg);
             }
-            token => return Err(CompilerError::UnexpectedToken(token.clone(), self.line)),
+            token => {
+                return Err(CompilerError::UnexpectedToken(
+                    token.clone().into(),
+                    self.line,
+                ))
+            }
         };
 
         self.consume();
@@ -174,11 +204,14 @@ impl ASMCompiler {
                 ASMToken::Instruction(instruction) => match instruction {
                     InstructionType::Mov => self.compile_mov(instruction.opcode())?,
                     InstructionType::Inc | InstructionType::Pop | InstructionType::Push => {
-                        let register = match self.peek(1).ok_or(CompilerError::TokenNotFound)? {
+                        let register = match self
+                            .peek(1)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                        {
                             ASMToken::Register(reg) => reg,
                             token => {
                                 return Err(CompilerError::UnexpectedToken(
-                                    token.clone(),
+                                    token.clone().into(),
                                     self.line,
                                 ))
                             }
@@ -188,24 +221,35 @@ impl ASMCompiler {
                         self.consume();
                     }
                     InstructionType::Cmp | InstructionType::Add | InstructionType::Sub => {
-                        let register = match self.peek(1).ok_or(CompilerError::TokenNotFound)? {
+                        let register = match self
+                            .peek(1)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                        {
                             ASMToken::Register(reg) => reg,
                             token => {
                                 return Err(CompilerError::UnexpectedToken(
-                                    token.clone(),
+                                    token.clone().into(),
                                     self.line,
                                 ))
                             }
                         };
-                        let token = self.peek(2).ok_or(CompilerError::TokenNotFound)?;
+                        let token = self
+                            .peek(2)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
                         if *token != ASMToken::Comma {
-                            return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
+                            return Err(CompilerError::UnexpectedToken(
+                                token.clone().into(),
+                                self.line,
+                            ));
                         }
-                        let register1 = match self.peek(3).ok_or(CompilerError::TokenNotFound)? {
+                        let register1 = match self
+                            .peek(3)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                        {
                             ASMToken::Register(reg) => reg,
                             token => {
                                 return Err(CompilerError::UnexpectedToken(
-                                    token.clone(),
+                                    token.clone().into(),
                                     self.line,
                                 ))
                             }
@@ -223,40 +267,59 @@ impl ASMCompiler {
                     | InstructionType::Jace
                     | InstructionType::Jacc
                     | InstructionType::Jacz => {
-                        let register = match self.peek(1).ok_or(CompilerError::TokenNotFound)? {
+                        let register = match self
+                            .peek(1)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                        {
                             ASMToken::Register(reg) => reg,
                             token => {
                                 return Err(CompilerError::UnexpectedToken(
-                                    token.clone(),
+                                    token.clone().into(),
                                     self.line,
                                 ))
                             }
                         };
-                        let token = self.peek(2).ok_or(CompilerError::TokenNotFound)?;
+                        let token = self
+                            .peek(2)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
                         if *token != ASMToken::Comma {
-                            return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
+                            return Err(CompilerError::UnexpectedToken(
+                                token.clone().into(),
+                                self.line,
+                            ));
                         }
-                        let register1 = match self.peek(3).ok_or(CompilerError::TokenNotFound)? {
+                        let register1 = match self
+                            .peek(3)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                        {
                             ASMToken::Register(reg) => reg,
                             token => {
                                 return Err(CompilerError::UnexpectedToken(
-                                    token.clone(),
+                                    token.clone().into(),
                                     self.line,
                                 ))
                             }
                         };
-                        let token = self.peek(4).ok_or(CompilerError::TokenNotFound)?;
+                        let token = self
+                            .peek(4)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
                         if *token != ASMToken::Comma {
-                            return Err(CompilerError::UnexpectedToken(token.clone(), self.line));
+                            return Err(CompilerError::UnexpectedToken(
+                                token.clone().into(),
+                                self.line,
+                            ));
                         }
                         let mut arg = [register.to_byte(), register1.to_byte()].to_vec();
                         arg.extend_from_slice(&0u64.to_le_bytes());
                         self.write_instruction(instruction.opcode(), &arg);
-                        let label = match self.peek(5).ok_or(CompilerError::TokenNotFound)? {
-                            ASMToken::ToLabel(label) => label,
+                        let label = match self
+                            .peek(5)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                        {
+                            ASMToken::Identifier(label) => label,
                             token => {
                                 return Err(CompilerError::UnexpectedToken(
-                                    token.clone(),
+                                    token.clone().into(),
                                     self.line,
                                 ))
                             }
@@ -276,11 +339,14 @@ impl ASMCompiler {
                     | InstructionType::Jme
                     | InstructionType::Jmn => {
                         self.write_instruction(instruction.opcode(), &0u64.to_le_bytes());
-                        let label = match self.peek(1).ok_or(CompilerError::TokenNotFound)? {
-                            ASMToken::ToLabel(label) => label,
+                        let label = match self
+                            .peek(1)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                        {
+                            ASMToken::Identifier(label) => label,
                             token => {
                                 return Err(CompilerError::UnexpectedToken(
-                                    token.clone(),
+                                    token.clone().into(),
                                     self.line,
                                 ))
                             }
@@ -296,14 +362,22 @@ impl ASMCompiler {
                     }
                 },
                 ASMToken::NewLine => {}
-                _ => return Err(CompilerError::UnexpectedToken(token.clone(), self.line)),
+                _ => {
+                    return Err(CompilerError::UnexpectedToken(
+                        token.clone().into(),
+                        self.line,
+                    ))
+                }
             }
             if self.peek(0).is_some_and(|e| *e == ASMToken::NewLine) {
                 self.consume();
             } else {
                 match self.peek(0) {
                     Some(token) => {
-                        return Err(CompilerError::UnexpectedToken(token.clone(), self.line))
+                        return Err(CompilerError::UnexpectedToken(
+                            token.clone().into(),
+                            self.line,
+                        ))
                     }
                     None => {}
                 }

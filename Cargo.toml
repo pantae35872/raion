@@ -3,6 +3,6 @@ resolver = "1"
 
 members = [
   "common",
-  "craion",
+  "craion", "proc",
   "raion",
 ]

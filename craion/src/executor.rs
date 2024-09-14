@@ -4,7 +4,6 @@ use crate::{
 };
 
 use self::registers::RegisterFile;
-use crate::decoder::instruction::Instruction;
 
 pub mod registers;
 

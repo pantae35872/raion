@@ -1,39 +1,13 @@
-use crate::{decoder::argument::Argument, executor::registers::RegisterFile};
+use proc::instruction;
 
-use super::{Instruction, JME_OPCODE};
+use super::InstructionArgument;
 
-pub struct Jme<'a, 'b> {
-    register: &'a mut RegisterFile,
-    argument: Argument<'b>,
-    instruction_length: usize,
-}
-
-impl<'a, 'b> Jme<'a, 'b> {
-    pub fn new(
-        register: &'a mut RegisterFile,
-        argument: Argument<'b>,
-        instruction_length: usize,
-    ) -> Self {
-        Self {
-            register,
-            argument,
-            instruction_length,
-        }
+#[instruction(JME_OPCODE)]
+pub fn jme(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
+    if !(args.register.get_negative() || args.register.get_zero() || args.register.get_carry()) {
+        args.register.set_ip(args.argument.parse_address()?);
+    } else {
+        args.register.inc_ip(args.instruction_length);
     }
-}
-
-impl<'a, 'b> Instruction for Jme<'a, 'b> {
-    fn execute(&mut self) -> Result<(), super::InstructionError> {
-        if !(self.register.get_negative() || self.register.get_zero() || self.register.get_carry())
-        {
-            self.register.set_ip(self.argument.parse_address()?);
-        } else {
-            self.register.inc_ip(self.instruction_length);
-        }
-        return Ok(());
-    }
-
-    fn op_code(&self) -> u16 {
-        return JME_OPCODE;
-    }
+    return Ok(());
 }

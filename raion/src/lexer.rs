@@ -82,7 +82,7 @@ impl<'a> Lexer<'a> {
                     continue;
                 }
 
-                tokens.push(ASMToken::ToLabel(buffer.clone()));
+                tokens.push(ASMToken::Identifier(buffer.clone()));
                 buffer.clear();
                 continue;
             }

@@ -26,7 +26,6 @@ pub enum Registers {
     D64,
     IP,
     SP,
-    HALT,
     FLAGS,
 }
 
@@ -71,7 +70,6 @@ impl Display for Registers {
             Registers::D32 => write!(f, "d32"),
             Registers::D64 => write!(f, "d64"),
             Registers::IP => write!(f, "instruction pointer"),
-            Registers::HALT => write!(f, "halt"),
             Registers::FLAGS => write!(f, "flags"),
             Registers::SP => write!(f, "stack pointer"),
         }
@@ -124,7 +122,6 @@ impl Registers {
 
     pub fn size(&self) -> RegisterSizes {
         match self {
-            Self::HALT => return RegisterSizes::SizeBool,
             Self::A8 | Self::B8 | Self::C8 | Self::D8 => return RegisterSizes::SizeU8,
             Self::A16 | Self::B16 | Self::C16 | Self::D16 | Self::FLAGS => {
                 return RegisterSizes::SizeU16;
@@ -158,7 +155,6 @@ pub struct RegisterFile {
     d: u64,
     ip: Address,
     sp: Address,
-    halt: bool,
     flags: Flags,
 }
 
@@ -196,17 +192,8 @@ impl RegisterFile {
             d: 0,
             ip: Address::new(0x0),
             sp: Address::new(0x0),
-            halt: false,
-            flags: Flags::new(),
+            flags: Flags::empty(),
         }
-    }
-
-    pub fn set_halt(&mut self, data: bool) {
-        self.halt = data;
-    }
-
-    pub fn get_halt(&self) -> bool {
-        return self.halt;
     }
 
     pub fn set_sp(&mut self, data: Address) {
@@ -312,8 +299,7 @@ impl RegisterFile {
             Registers::D64 => self.get_d64(),
             Registers::IP => self.get_ip().get_raw() as u64,
             Registers::SP => self.get_sp().get_raw() as u64,
-            Registers::FLAGS => self.get_flags_raw().into(),
-            Registers::HALT => self.get_halt().into(),
+            Registers::FLAGS => self.get_flags().bits().into(),
         }
     }
 
@@ -337,41 +323,48 @@ impl RegisterFile {
             Registers::D64 => self.set_d64(data as u64),
             Registers::IP => self.set_ip(Address::new(data as usize)),
             Registers::SP => self.set_sp(Address::new(data as usize)),
-            Registers::HALT => self.set_halt(data != 0),
-            Registers::FLAGS => self.set_flags_raw(data as u16),
+            Registers::FLAGS => self.set_flags(Flags::from_bits_retain(data as u16)),
         }
     }
 
-    pub fn set_negative(&mut self, data: bool) {
-        self.flags.set_negative(data);
+    pub fn set_flags(&mut self, data: Flags) {
+        self.flags = data;
+    }
+
+    pub fn get_flags(&self) -> Flags {
+        return self.flags;
     }
 
     pub fn get_negative(&self) -> bool {
-        return self.flags.negative();
-    }
-
-    pub fn set_carry(&mut self, data: bool) {
-        self.flags.set_carry(data);
+        return self.flags.contains(Flags::NEGATIVE);
     }
 
     pub fn get_carry(&self) -> bool {
-        return self.flags.carry();
-    }
-
-    pub fn set_zero(&mut self, data: bool) {
-        self.flags.set_zero(data);
+        return self.flags.contains(Flags::CARRY);
     }
 
     pub fn get_zero(&self) -> bool {
-        return self.flags.zero();
+        return self.flags.contains(Flags::ZERO);
     }
 
-    unsafe fn set_flags_raw(&mut self, data: u16) {
-        self.flags = Flags::from_bits(data);
+    pub fn set_negative(&mut self, data: bool) {
+        self.flags.set(Flags::NEGATIVE, data);
     }
 
-    pub fn get_flags_raw(&self) -> u16 {
-        return self.flags.into_bits();
+    pub fn set_carry(&mut self, data: bool) {
+        self.flags.set(Flags::CARRY, data);
+    }
+
+    pub fn set_zero(&mut self, data: bool) {
+        self.flags.set(Flags::ZERO, data);
+    }
+
+    pub fn set_halt(&mut self, data: bool) {
+        self.flags.set(Flags::HALT, data);
+    }
+
+    pub fn get_halt(&self) -> bool {
+        return self.flags.contains(Flags::HALT);
     }
 
     fn set_a8(&mut self, data: u8) {

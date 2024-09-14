@@ -205,7 +205,7 @@ pub enum ASMToken {
     Label(String),
     Register(RegisterType),
     Number(u64),
-    ToLabel(String),
+    Identifier(String),
     Comma,
     NewLine,
 }
@@ -225,7 +225,7 @@ impl Display for ASMToken {
             Self::Number(number) => {
                 write!(f, "Number token with value: {}", number)
             }
-            Self::ToLabel(label) => write!(f, "ToLabel token with value: {}", label),
+            Self::Identifier(label) => write!(f, "ToLabel token with value: {}", label),
             Self::Comma => write!(f, "Comma token"),
             Self::NewLine => write!(f, "New line token"),
         }

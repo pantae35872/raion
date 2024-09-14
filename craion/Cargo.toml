@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bitfield-struct = "0.8.0"
+bitflags = "2.6.0"
 
 [dependencies.common]
 path = "../common"
+
+
+[dependencies.proc]
+path = "../proc"

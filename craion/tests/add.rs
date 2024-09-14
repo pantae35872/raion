@@ -1,5 +1,5 @@
+use common::constants::ADD_OPCODE;
 use craion::{
-    decoder::instruction::ADD_OPCODE,
     executor::{
         registers::{RegisterFile, Registers},
         Executor,

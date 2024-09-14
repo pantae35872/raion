@@ -1,5 +1,5 @@
+use common::constants::{MOV_NUM2REG, MOV_OPCODE, POP_OPCODE, PUSH_OPCODE};
 use craion::{
-    decoder::instruction::{mov::MOV_NUM2REG, MOV_OPCODE, POP_OPCODE, PUSH_OPCODE},
     executor::{
         registers::{RegisterFile, Registers},
         Executor,

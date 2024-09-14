@@ -1,13 +1,11 @@
-use bitfield_struct::bitfield;
+use bitflags::bitflags;
 
-#[bitfield(u16)]
-pub struct Flags {
-    #[bits(1)]
-    pub zero: bool,
-    #[bits(1)]
-    pub carry: bool,
-    #[bits(1)]
-    pub negative: bool,
-    #[bits(13)]
-    reserve: u16,
+bitflags! {
+    #[derive(Debug, Clone, Copy)]
+    pub struct Flags: u16 {
+        const ZERO = 1 << 0;
+        const CARRY = 1 << 1;
+        const NEGATIVE = 1 << 2;
+        const HALT = 1 << 15;
+    }
 }
