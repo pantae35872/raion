@@ -1,6 +1,8 @@
 use std::{collections::HashMap, error::Error, fmt::Display};
 
-use common::constants::{MOV_ADD2SP, MOV_NUM2REG, MOV_REG2MEM, MOV_REG2REG, MOV_REG2SP};
+use common::constants::{
+    MOV_ADD2SP, MOV_DEREF_REG2REG, MOV_NUM2REG, MOV_REG2MEM, MOV_REG2REG, MOV_REG2SP,
+};
 
 use crate::token::{ASMToken, InstructionType, RegisterType};
 
@@ -37,13 +39,20 @@ impl Display for CompilerError {
 
 impl Error for CompilerError {}
 
+enum CurrentSection {
+    Text,
+    Data,
+}
+
 pub struct ASMCompiler {
     tokens: Vec<ASMToken>,
     write_pos: usize,
     index: usize,
     labels: HashMap<String, usize>,
     label_replaces: Vec<(String, usize, usize)>,
-    byte_codes: Vec<u8>,
+    text: Vec<u8>,
+    data: Vec<u8>,
+    current_section: CurrentSection,
     line: usize,
 }
 
@@ -55,14 +64,24 @@ impl ASMCompiler {
             index: 0,
             labels: HashMap::new(),
             label_replaces: Vec::new(),
-            byte_codes: Vec::new(),
+            text: Vec::new(),
+            data: Vec::new(),
+            current_section: CurrentSection::Text,
             line: 1,
         }
     }
 
     pub fn write(&mut self, data: &[u8]) {
-        self.byte_codes.extend_from_slice(data);
-        self.write_pos += data.len();
+        match self.current_section {
+            CurrentSection::Data => {
+                self.data.extend_from_slice(data);
+                self.write_pos += data.len();
+            }
+            CurrentSection::Text => {
+                self.text.extend_from_slice(data);
+                self.write_pos += data.len();
+            }
+        }
     }
 
     pub fn write_instruction(&mut self, opcode: u16, argument: &[u8]) {
@@ -129,6 +148,46 @@ impl ASMCompiler {
                             self.write_instruction(instruction_opcode, &arg);
                         }
                     }
+                    ASMToken::Identifier(ident) => {
+                        let ident = ident.clone();
+                        self.write_instruction(
+                            instruction_opcode,
+                            &[MOV_NUM2REG, register.to_byte(), 0, 0, 0, 0, 0, 0, 0, 0],
+                        );
+                        self.label_replaces
+                            .push((ident, self.write_pos - 8, self.line));
+                    }
+                    ASMToken::LBracket => {
+                        match self
+                            .peek(4)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
+                        {
+                            ASMToken::Register(reg) => {
+                                self.write_instruction(
+                                    instruction_opcode,
+                                    &[MOV_DEREF_REG2REG, register.to_byte(), reg.to_byte()],
+                                );
+                            }
+                            unexpected => {
+                                return Err(CompilerError::UnexpectedToken(
+                                    Some(unexpected.clone()),
+                                    self.line,
+                                ))
+                            }
+                        };
+
+                        let token = self
+                            .peek(5)
+                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
+                        if *token != ASMToken::RBracket {
+                            return Err(CompilerError::UnexpectedToken(
+                                token.clone().into(),
+                                self.line,
+                            ));
+                        }
+                        self.consume();
+                        self.consume();
+                    }
                     token => {
                         return Err(CompilerError::UnexpectedToken(
                             token.clone().into(),
@@ -182,7 +241,7 @@ impl ASMCompiler {
 
     fn replace_labels(&mut self) -> Result<(), CompilerError> {
         for (label, pos, line) in &self.label_replaces {
-            let data = &mut self.byte_codes[*pos..(*pos + 8)];
+            let data = &mut self.text[*pos..(*pos + 8)];
             let label_data = self
                 .labels
                 .get(label)
@@ -192,13 +251,34 @@ impl ASMCompiler {
         return Ok(());
     }
 
-    pub fn compile(mut self) -> Result<Vec<u8>, CompilerError> {
+    pub fn compile(mut self) -> Result<(Vec<u8>, Vec<u8>), CompilerError> {
         while let Some(token) = self.peek(0).cloned() {
             match token {
                 ASMToken::Label(label) => {
                     if let Some(_) = self.labels.insert(label.clone(), self.write_pos) {
                         return Err(CompilerError::MultipleLabel(label.clone(), self.line));
                     }
+                    self.consume();
+                }
+                ASMToken::Identifier(identifier) => {
+                    if identifier == "section" {
+                        self.consume();
+                        if self
+                            .peek(0)
+                            .is_some_and(|e| *e == ASMToken::Identifier("text".to_string()))
+                        {
+                            self.current_section = CurrentSection::Text;
+                        } else if self
+                            .peek(0)
+                            .is_some_and(|e| *e == ASMToken::Identifier("data".to_string()))
+                        {
+                            self.current_section = CurrentSection::Data;
+                        }
+                        self.consume();
+                    }
+                }
+                ASMToken::String(string) => {
+                    self.write(string.as_bytes());
                     self.consume();
                 }
                 ASMToken::Instruction(instruction) => match instruction {
@@ -364,7 +444,9 @@ impl ASMCompiler {
                         self.consume();
                     }
                 },
-                ASMToken::NewLine => {}
+                ASMToken::NewLine => {
+                    self.consume();
+                }
                 _ => {
                     return Err(CompilerError::UnexpectedToken(
                         token.clone().into(),
@@ -372,22 +454,10 @@ impl ASMCompiler {
                     ))
                 }
             }
-            if self.peek(0).is_some_and(|e| *e == ASMToken::NewLine) {
-                self.consume();
-            } else {
-                match self.peek(0) {
-                    Some(token) => {
-                        return Err(CompilerError::UnexpectedToken(
-                            token.clone().into(),
-                            self.line,
-                        ))
-                    }
-                    None => {}
-                }
-            }
+
             self.line += 1;
         }
         self.replace_labels()?;
-        return Ok(self.byte_codes);
+        return Ok((self.text, self.data));
     }
 }

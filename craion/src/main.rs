@@ -22,7 +22,11 @@ fn main() {
     sin.read_to_end(&mut buf).unwrap();
     let sin = Sin::from_bytes(&buf).expect("");
     memory.mem_sets(Address::new(0), sin.text()).expect("");
+    memory
+        .mem_sets(Address::new(sin.text().len()), sin.data())
+        .expect("");
     let mut register = RegisterFile::new();
+    register.set_sp(Address::new(0xFFFE));
     let mut argument_memory = ArgumentMemory::new();
     let mut executor = Executor::new(&mut memory, &mut register, &mut argument_memory);
     executor.execute();

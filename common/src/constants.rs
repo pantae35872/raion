@@ -24,7 +24,7 @@ pub const JMC_OPCODE: u16 = 72;
 pub const HALT_OPCODE: u16 = 65535;
 
 // IO instructions
-pub const OUTC: u16 = 128;
+pub const OUTC_OPCODE: u16 = 128;
 
 //Mov sub instructions
 pub const MOV_REG2REG: u8 = 1;
@@ -32,3 +32,4 @@ pub const MOV_REG2MEM: u8 = 2;
 pub const MOV_NUM2REG: u8 = 3;
 pub const MOV_ADD2SP: u8 = 4;
 pub const MOV_REG2SP: u8 = 5;
+pub const MOV_DEREF_REG2REG: u8 = 6;

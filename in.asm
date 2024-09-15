@@ -1,30 +1,15 @@
+section text
 start:
-  mov sp, 0xFFFE
-  mov a8, 0x48 
-  outc a8
-  mov a8, 0x65
-  outc a8
-  mov a8, 0x6C
-  outc a8
-  mov a8, 0x6C
-  outc a8
-  mov a8, 0x6F
-  outc a8
-  mov a8, 0x20
-  outc a8
-  mov a8, 0x57
-  outc a8
-  mov a8, 0x6F
-  outc a8
-  mov a8, 0x72
-  outc a8
-  mov a8, 0x6C
-  outc a8
-  mov a8, 0x64
-  outc a8
-  mov a8, 0x21
-  outc a8
-  mov a8, 0x0A
-  outc a8
+  mov a64, hello_world
+  mov c64, 0
+print:
+  mov b8, [a64]
+  inc a64
+  outc b8
+  jacz b64, c64, end 
+  jmp print
 end:
   halt
+
+section data
+hello_world: "Hello, World!\n\0"

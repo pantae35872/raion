@@ -1,10 +1,5 @@
 use std::{error::Error, fmt::Display};
 
-use common::constants::{
-    ADD_OPCODE, CMP_OPCODE, HALT_OPCODE, INC_OPCODE, JACC_OPCODE, JACE_OPCODE, JACN_OPCODE,
-    JACZ_OPCODE, JMC_OPCODE, JME_OPCODE, JMN_OPCODE, JMP_OPCODE, JMZ_OPCODE, MOV_OPCODE,
-    POP_OPCODE, PUSH_OPCODE, SUB_OPCODE,
-};
 use proc::collect_instruction;
 
 use crate::{
@@ -30,7 +25,7 @@ mod jme;
 mod jmn;
 mod jmp;
 mod jmz;
-pub mod mov;
+mod mov;
 mod outc;
 mod pop;
 mod push;

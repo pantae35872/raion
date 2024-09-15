@@ -19,11 +19,12 @@ impl Error for SinError {}
 
 pub struct Sin<'a> {
     text: &'a [u8],
+    data: &'a [u8],
 }
 
 impl<'a> Sin<'a> {
-    pub fn new(text: &'a [u8]) -> Self {
-        Self { text }
+    pub fn new(text: &'a [u8], data: &'a [u8]) -> Self {
+        Self { text, data }
     }
 
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, SinError> {
@@ -33,22 +34,35 @@ impl<'a> Sin<'a> {
             return Err(SinError::InvalidSin);
         }
 
-        let buffer_len = sin.read_u64().ok_or(SinError::InvalidSin)?;
+        let text_len = sin.read_u64().ok_or(SinError::InvalidSin)?;
+        let data_len = sin.read_u64().ok_or(SinError::InvalidSin)?;
         let decoded_text = sin
-            .read_bytes(buffer_len as usize)
+            .read_bytes(text_len as usize)
             .ok_or(SinError::InvalidSin)?;
-        return Ok(Self { text: decoded_text });
+        let decoded_data = sin
+            .read_bytes(data_len as usize)
+            .ok_or(SinError::InvalidSin)?;
+        return Ok(Self {
+            text: decoded_text,
+            data: decoded_data,
+        });
     }
 
     pub fn text(&self) -> &'a [u8] {
         return self.text;
     }
 
+    pub fn data(&self) -> &'a [u8] {
+        return self.data;
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buffer = Vec::new();
         buffer.extend_from_slice(&[69, 69, 0x69, 0x69]);
         buffer.extend_from_slice(&self.text.len().to_le_bytes());
+        buffer.extend_from_slice(&self.data.len().to_le_bytes());
         buffer.extend_from_slice(self.text);
+        buffer.extend_from_slice(self.data);
 
         return buffer;
     }

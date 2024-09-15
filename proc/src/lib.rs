@@ -11,7 +11,12 @@ use syn::{
 
 extern crate proc_macro;
 
-static INSTRUCTIONS: Mutex<Vec<(String, String)>> = Mutex::new(Vec::new());
+struct Instruction {
+    fn_name: String,
+    op_code: String,
+}
+
+static INSTRUCTIONS: Mutex<Vec<Instruction>> = Mutex::new(Vec::new());
 
 #[proc_macro_attribute]
 pub fn instruction(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -31,7 +36,10 @@ pub fn instruction(args: TokenStream, input: TokenStream) -> TokenStream {
         _ => quote!(#opcode_expr).to_string(), // Store the constant name or expression as a string
     };
     let fn_name = input_fn.sig.ident.to_string();
-    INSTRUCTIONS.lock().unwrap().push((fn_name, opcode));
+    INSTRUCTIONS.lock().unwrap().push(Instruction {
+        fn_name,
+        op_code: opcode,
+    });
     quote!(#input_fn).into()
 }
 
@@ -58,11 +66,12 @@ pub fn collect_instruction(args: TokenStream) -> TokenStream {
     let instruction_length_var = input.identifiers.get(4).expect("Invalid argument");
     let decode_logic = instruction
         .iter()
-        .map(|(instruction, opcode)| {
-            let opcode_ts = syn::Ident::new(&opcode, proc_macro2::Span::call_site());
-            let instruction_ts = syn::Ident::new(&instruction, proc_macro2::Span::call_site());
+        .map(|instruction| {
+            let opcode_ts = syn::Ident::new(&instruction.op_code, proc_macro2::Span::call_site());
+            let instruction_ts =
+                syn::Ident::new(&instruction.fn_name, proc_macro2::Span::call_site());
             quote! {
-                #opcode_ts => {
+                common::constants::#opcode_ts => {
                     return Ok(Self {
                         instruction_executor: #instruction_ts::#instruction_ts,
                         instruction_argument: InstructionArgument {

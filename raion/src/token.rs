@@ -210,7 +210,10 @@ pub enum ASMToken {
     Register(RegisterType),
     Number(u64),
     Identifier(String),
+    String(String),
     Comma,
+    LBracket,
+    RBracket,
     NewLine,
 }
 
@@ -230,6 +233,9 @@ impl Display for ASMToken {
                 write!(f, "Number token with value: {}", number)
             }
             Self::Identifier(label) => write!(f, "ToLabel token with value: {}", label),
+            Self::String(string) => write!(f, "String token with value: {}", string),
+            Self::LBracket => write!(f, "Left Bracket token"),
+            Self::RBracket => write!(f, "Right Bracket token"),
             Self::Comma => write!(f, "Comma token"),
             Self::NewLine => write!(f, "New line token"),
         }

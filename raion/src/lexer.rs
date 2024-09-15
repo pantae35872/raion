@@ -6,6 +6,9 @@ use crate::token::{ASMToken, InstructionType, RegisterType};
 pub enum LexerError {
     InvalidToken(String),
     InvalidNumber(ParseIntError),
+    InvalidEscapeSequence(String),
+    ExpectedEndDoubleQuote(Option<char>),
+    EndOfBuffer,
 }
 
 impl Display for LexerError {
@@ -13,6 +16,16 @@ impl Display for LexerError {
         match self {
             Self::InvalidToken(buffer) => write!(f, "Trying to tokenize invalid input: {}", buffer),
             Self::InvalidNumber(e) => write!(f, "Trying to tokenize invalid number, {}", e),
+            Self::InvalidEscapeSequence(escape_sequence) => {
+                write!(f, "Invalid escape sequence: '{}'", escape_sequence)
+            }
+            Self::ExpectedEndDoubleQuote(found) => {
+                write!(f, "Expected end double quote found: {:?}", found)
+            }
+            Self::EndOfBuffer => write!(
+                f,
+                "trying to read next token but already at the end of the buffer"
+            ),
         }
     }
 }
@@ -59,7 +72,10 @@ impl<'a> Lexer<'a> {
         while let Some(value) = self.peek(0) {
             if value.is_alphabetic() {
                 buffer.push(self.consume().unwrap());
-                while self.peek(0).is_some_and(|e| e.is_alphanumeric()) {
+                while self
+                    .peek(0)
+                    .is_some_and(|e| e.is_alphanumeric() || e == '_')
+                {
                     buffer.push(self.consume().unwrap());
                 }
 
@@ -121,6 +137,134 @@ impl<'a> Lexer<'a> {
                 }
                 continue;
             }
+            if value == '[' {
+                self.consume();
+                tokens.push(ASMToken::LBracket);
+                continue;
+            }
+            if value == ']' {
+                self.consume();
+                tokens.push(ASMToken::RBracket);
+                continue;
+            }
+            if value == '\"' {
+                self.consume();
+                loop {
+                    while self
+                        .peek(0)
+                        .is_some_and(|e| e != '\\' && e != '\"' && e != '\n')
+                    {
+                        buffer.push(self.consume().unwrap());
+                    }
+
+                    if self.peek(0).is_some_and(|e| e == '\"')
+                        && self.peek(1).is_some_and(|e| e == '\"')
+                    {
+                        self.consume();
+                        self.consume();
+
+                        if self.peek(0).is_some_and(|e| e == '\n') {
+                            self.consume();
+                        }
+                        loop {
+                            while self.peek(0).is_some_and(|e| e != '\\' && e != '\"') {
+                                buffer.push(self.consume().unwrap());
+                            }
+
+                            if self.peek(0).is_some_and(|e| e == '\"')
+                                && self.peek(1).is_some_and(|e| e == '\"')
+                                && self.peek(2).is_some_and(|e| e == '\"')
+                            {
+                                if self.peek(3).is_some_and(|e| e == '\"') {
+                                    buffer.push('\"');
+                                    self.consume();
+                                }
+                                if self.peek(3).is_some_and(|e| e == '\"') {
+                                    buffer.push('\"');
+                                    self.consume();
+                                }
+                                self.consume();
+                                self.consume();
+                                self.consume();
+                                break;
+                            }
+
+                            if self.peek(0).is_some_and(|e| e == '\\') {
+                                self.consume();
+                                match self.consume().ok_or(LexerError::EndOfBuffer)? {
+                                    'b' => buffer.push('\u{08}'),
+                                    't' => buffer.push('\u{09}'),
+                                    'n' => buffer.push('\u{0A}'),
+                                    'f' => buffer.push('\u{0C}'),
+                                    'r' => buffer.push('\u{0D}'),
+                                    '\"' => buffer.push('\u{22}'),
+                                    '0' => buffer.push('\u{0}'),
+                                    '\\' => buffer.push('\u{5C}'),
+                                    _ => {
+                                        while self
+                                            .peek(0)
+                                            .is_some_and(|e| e.is_whitespace() || e == '\n')
+                                        {
+                                            self.consume();
+                                        }
+                                    }
+                                }
+                                continue;
+                            }
+
+                            if self.peek(0).is_some_and(|e| e == '\"')
+                                || self.peek(1).is_some_and(|e| e == '\"')
+                            {
+                                if self.peek(0).is_some_and(|e| e == '\"')
+                                    && self.peek(1).is_some_and(|e| e == '\"')
+                                {
+                                    buffer.push(self.consume().unwrap());
+                                }
+                                buffer.push(self.consume().unwrap());
+                                continue;
+                            }
+                            break;
+                        }
+                        break;
+                    }
+
+                    if self.peek(0).is_some_and(|e| e == '\n') {
+                        return Err(LexerError::ExpectedEndDoubleQuote(Some('\n')));
+                    }
+
+                    if self.peek(0).is_some_and(|e| e == '\\') {
+                        self.consume();
+                        match self.consume().ok_or(LexerError::EndOfBuffer)? {
+                            'b' => buffer.push('\u{08}'),
+                            't' => buffer.push('\u{09}'),
+                            'n' => buffer.push('\u{0A}'),
+                            'f' => buffer.push('\u{0C}'),
+                            'r' => buffer.push('\u{0D}'),
+                            '"' => buffer.push('\u{22}'),
+                            '0' => buffer.push('\u{0}'),
+                            '\\' => buffer.push('\u{5C}'),
+                            invalid_escape => {
+                                return Err(LexerError::InvalidEscapeSequence(format!(
+                                    "\\{}",
+                                    invalid_escape
+                                )))
+                            }
+                        }
+                        continue;
+                    }
+                    if self.peek(0).is_some_and(|e| e == '\"') {
+                        self.consume();
+                    } else {
+                        return Err(LexerError::ExpectedEndDoubleQuote(self.peek(0)));
+                    }
+                    break;
+                }
+
+                tokens.push(ASMToken::String(buffer.clone()));
+                buffer.clear();
+                continue;
+            }
+
             if value.is_whitespace() {
                 self.consume();
                 continue;

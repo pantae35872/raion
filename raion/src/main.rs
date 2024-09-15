@@ -18,10 +18,11 @@ fn main() -> ExitCode {
     let mut abc = String::new();
     file.read_to_string(&mut abc).unwrap();
     let lexer = Lexer::new(&abc);
-    let compiler = ASMCompiler::new(lexer.tokenize_asm().expect("Cannot parse"));
+    let tokens = lexer.tokenize_asm().expect("Cannot parse");
+    let compiler = ASMCompiler::new(tokens);
     match compiler.compile() {
-        Ok(result) => {
-            let sin = Sin::new(&result).to_bytes();
+        Ok((text, data)) => {
+            let sin = Sin::new(&text, &data).to_bytes();
 
             if Path::new("out.sin").exists() {
                 fs::remove_file("out.sin").unwrap();

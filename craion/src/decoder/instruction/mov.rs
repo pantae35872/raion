@@ -1,5 +1,9 @@
-use common::constants::{
-    MOV_ADD2SP, MOV_NUM2REG, MOV_OPCODE, MOV_REG2MEM, MOV_REG2REG, MOV_REG2SP,
+use common::{
+    constants::{
+        MOV_ADD2SP, MOV_DEREF_REG2REG, MOV_NUM2REG, MOV_OPCODE, MOV_REG2MEM, MOV_REG2REG,
+        MOV_REG2SP,
+    },
+    memory::buffer_reader::BufferReader,
 };
 use proc::instruction;
 
@@ -62,6 +66,33 @@ pub fn mov(args: &mut InstructionArgument) -> Result<(), super::InstructionError
                 args.register
                     .get_general(&args.argument.parse_register()?)? as usize,
             ));
+        }
+        MOV_DEREF_REG2REG => {
+            let register = args.argument.parse_register()?;
+            let address = args.argument.parse_register()?;
+            let address = Address::new(args.register.get_general(&address)? as usize);
+            match register.size() {
+                RegisterSizes::SizeU8 => {
+                    let data = args.memory.mem_get(address)?;
+                    args.register.set_general(&register, data.into())?;
+                }
+                RegisterSizes::SizeU16 => {
+                    let data = args.memory.mem_gets(address, 2)?;
+                    let data = BufferReader::new(data).read_u16().unwrap();
+                    args.register.set_general(&register, data.into())?;
+                }
+                RegisterSizes::SizeU32 => {
+                    let data = args.memory.mem_gets(address, 4)?;
+                    let data = BufferReader::new(data).read_u32().unwrap();
+                    args.register.set_general(&register, data.into())?;
+                }
+                RegisterSizes::SizeU64 => {
+                    let data = args.memory.mem_gets(address, 8)?;
+                    let data = BufferReader::new(data).read_u64().unwrap();
+                    args.register.set_general(&register, data)?;
+                }
+                RegisterSizes::SizeBool => unreachable!(),
+            }
         }
         invalid_subop_code => {
             return Err(super::InstructionError::InvalidSubOpCode(
