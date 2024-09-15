@@ -1,6 +1,6 @@
 use common::constants::HALT_OPCODE;
 
-use crate::memory::{address::Address, Memory, MemoryError};
+use craion::memory::{address::Address, Memory, MemoryError};
 
 pub struct InstructionHelper<'a> {
     memory: &'a mut Memory,

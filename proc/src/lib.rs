@@ -64,6 +64,8 @@ pub fn collect_instruction(args: TokenStream) -> TokenStream {
     let memory_var = input.identifiers.get(2).expect("Invalid argument");
     let argument_var = input.identifiers.get(3).expect("Invalid argument");
     let instruction_length_var = input.identifiers.get(4).expect("Invalid argument");
+    let ret_stack_var = input.identifiers.get(5).expect("Invalid argument");
+    let section_manager_var = input.identifiers.get(6).expect("Invalid argument");
     let decode_logic = instruction
         .iter()
         .map(|instruction| {
@@ -79,6 +81,8 @@ pub fn collect_instruction(args: TokenStream) -> TokenStream {
                             memory: #memory_var,
                             argument: #argument_var,
                             instruction_length: #instruction_length_var,
+                            ret_stack: #ret_stack_var,
+                            section_manager: #section_manager_var
                         },
                         opcode: #op_code_var,
                     })

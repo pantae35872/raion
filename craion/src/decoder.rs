@@ -4,7 +4,7 @@ use instruction::Instruction;
 
 use crate::{
     executor::registers::RegisterFile,
-    memory::{address::Address, argument_memory::ArgumentMemory, Memory, MemoryError},
+    memory::{address::Address, argument_memory::ArgumentMemory, Memory, MemoryError}, ret_stack::RetStack, section_manager::SectionManager,
 };
 
 use self::argument::Argument;
@@ -33,7 +33,8 @@ impl Display for DecoderError {
 impl Error for DecoderError {}
 
 
-pub fn decode<'a>(memory: &'a mut Memory, register: &'a mut RegisterFile, argument_memory: &'a mut ArgumentMemory) -> Result<Instruction<'a>, DecoderError> {
+pub fn decode<'a>(memory: &'a mut Memory, register: &'a mut RegisterFile, argument_memory: &'a mut ArgumentMemory, ret_stack: &'a mut RetStack, 
+    section_manager: &'a mut SectionManager) -> Result<Instruction<'a>, DecoderError> {
     let instruction_length = match memory.mem_get(register.get_ip()) {
         Ok(il) => il as usize,
         Err(err) => match err {
@@ -55,5 +56,5 @@ pub fn decode<'a>(memory: &'a mut Memory, register: &'a mut RegisterFile, argume
     let opcode = u16::from_le_bytes(<[u8; 2]>::try_from(&instruction[1..=2]).unwrap());
     let argument = &instruction[3..instruction_length];
     argument_memory.set_arguement(argument);
-    return Ok(Instruction::decode(opcode, register, memory, Argument::new(argument_memory.get_argument()), instruction_length)?);
+    return Ok(Instruction::decode(opcode, register, memory, Argument::new(argument_memory.get_argument()), ret_stack, section_manager, instruction_length)?);
 }

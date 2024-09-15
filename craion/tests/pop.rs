@@ -1,12 +1,14 @@
+mod instruction_helper;
+
 use common::constants::{MOV_NUM2REG, MOV_OPCODE, POP_OPCODE, PUSH_OPCODE};
 use craion::{
     executor::{
         registers::{RegisterFile, Registers},
         Executor,
     },
-    instruction_helper::InstructionHelper,
     memory::{address::Address, argument_memory::ArgumentMemory, Memory},
 };
+use instruction_helper::InstructionHelper;
 
 #[test]
 fn pop_u64() {

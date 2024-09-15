@@ -33,3 +33,9 @@ pub const MOV_NUM2REG: u8 = 3;
 pub const MOV_ADD2SP: u8 = 4;
 pub const MOV_REG2SP: u8 = 5;
 pub const MOV_DEREF_REG2REG: u8 = 6;
+pub const MOV_SECTION_ADDR_2REG: u8 = 7;
+
+pub const MAGIC_1: u8 = 69;
+pub const MAGIC_2: u8 = 69;
+pub const MAGIC_3: u8 = 0x69;
+pub const MAGIC_4: u8 = 0x69;

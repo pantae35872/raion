@@ -1,7 +1,7 @@
 use common::{
     constants::{
         MOV_ADD2SP, MOV_DEREF_REG2REG, MOV_NUM2REG, MOV_OPCODE, MOV_REG2MEM, MOV_REG2REG,
-        MOV_REG2SP,
+        MOV_REG2SP, MOV_SECTION_ADDR_2REG,
     },
     memory::buffer_reader::BufferReader,
 };
@@ -9,7 +9,7 @@ use proc::instruction;
 
 use crate::{executor::registers::RegisterSizes, memory::address::Address};
 
-use super::InstructionArgument;
+use super::{InstructionArgument, InstructionError};
 
 #[instruction(MOV_OPCODE)]
 pub fn mov(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
@@ -94,11 +94,30 @@ pub fn mov(args: &mut InstructionArgument) -> Result<(), super::InstructionError
                 RegisterSizes::SizeBool => unreachable!(),
             }
         }
+        MOV_SECTION_ADDR_2REG => {
+            let register = args.argument.parse_register()?;
+            let section_hash = args.argument.parse_u64()?;
+            let value = args
+                .section_manager
+                .get_section_hash(section_hash)
+                .ok_or(InstructionError::InvalidSection(section_hash))?;
+            match register.size() {
+                RegisterSizes::SizeU64 => {
+                    args.register
+                        .set_general(&register, value.mem_start().get_raw() as u64)?;
+                }
+                _ => {
+                    return Err(InstructionError::AddressToRegisterError(
+                        register.size().byte(),
+                    ))
+                }
+            }
+        }
         invalid_subop_code => {
             return Err(super::InstructionError::InvalidSubOpCode(
                 MOV_OPCODE,
                 invalid_subop_code,
-            ))
+            ));
         }
     };
     return Ok(());

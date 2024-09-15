@@ -147,6 +147,22 @@ impl<'a> Lexer<'a> {
                 tokens.push(ASMToken::RBracket);
                 continue;
             }
+            if value == '{' {
+                self.consume();
+                tokens.push(ASMToken::LCurly);
+                continue;
+            }
+            if value == '}' {
+                self.consume();
+                tokens.push(ASMToken::RCurly);
+                continue;
+            }
+            if value == '-' && self.peek(1).is_some_and(|e| e == '>') {
+                self.consume();
+                self.consume();
+                tokens.push(ASMToken::Arrow);
+                continue;
+            }
             if value == '\"' {
                 self.consume();
                 loop {

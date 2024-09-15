@@ -1,12 +1,14 @@
+mod instruction_helper;
+
 use common::constants::CMP_OPCODE;
 use craion::{
     executor::{
         registers::{RegisterFile, Registers},
         Executor,
     },
-    instruction_helper::InstructionHelper,
     memory::{argument_memory::ArgumentMemory, Memory},
 };
+use instruction_helper::InstructionHelper;
 
 #[test]
 fn carry_cmp() {

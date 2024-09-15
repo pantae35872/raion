@@ -214,6 +214,9 @@ pub enum ASMToken {
     Comma,
     LBracket,
     RBracket,
+    LCurly,
+    RCurly,
+    Arrow,
     NewLine,
 }
 
@@ -236,6 +239,9 @@ impl Display for ASMToken {
             Self::String(string) => write!(f, "String token with value: {}", string),
             Self::LBracket => write!(f, "Left Bracket token"),
             Self::RBracket => write!(f, "Right Bracket token"),
+            Self::LCurly => write!(f, "Left Curly token"),
+            Self::RCurly => write!(f, "Right Curly token"),
+            Self::Arrow => write!(f, "Arrow token"),
             Self::Comma => write!(f, "Comma token"),
             Self::NewLine => write!(f, "New line token"),
         }

@@ -5,6 +5,8 @@ use proc::collect_instruction;
 use crate::{
     executor::registers::{RegisterFile, RegisterFileError},
     memory::{Memory, MemoryError},
+    ret_stack::RetStack,
+    section_manager::SectionManager,
 };
 
 use super::{
@@ -37,7 +39,9 @@ pub enum InstructionError {
     RegisterFileError(RegisterFileError),
     AccessingMemoryError(MemoryError),
     InvalidUTF8,
+    AddressToRegisterError(usize),
     InvalidSubOpCode(u16, u8),
+    InvalidSection(u64),
 }
 
 impl Display for InstructionError {
@@ -60,6 +64,12 @@ impl Display for InstructionError {
                 "Trying to execute invalid sup op code. Main OP Code {}, Sub OP Code: {}",
                 mainopcode, subopcode
             ),
+            Self::AddressToRegisterError(size) => write!(
+                f,
+                "Trying to put an address to a register with size that is not 64 bit; register size: {}",
+                size * 8
+            ),
+            Self::InvalidSection(hash) => write!(f, "Trying to access invalid section with hash: {}", hash)
         }
     }
 }
@@ -88,6 +98,8 @@ pub struct InstructionArgument<'a> {
     pub register: &'a mut RegisterFile,
     pub memory: &'a mut Memory,
     pub argument: Argument<'a>,
+    pub ret_stack: &'a mut RetStack,
+    pub section_manager: &'a mut SectionManager,
     pub instruction_length: usize,
 }
 
@@ -103,9 +115,19 @@ impl<'a> Instruction<'a> {
         register: &'a mut RegisterFile,
         memory: &'a mut Memory,
         argument: Argument<'a>,
+        ret_stack: &'a mut RetStack,
+        section_manager: &'a mut SectionManager,
         instruction_length: usize,
     ) -> Result<Self, DecoderError> {
-        collect_instruction!(op_code, register, memory, argument, instruction_length);
+        collect_instruction!(
+            op_code,
+            register,
+            memory,
+            argument,
+            instruction_length,
+            ret_stack,
+            section_manager
+        );
     }
 
     pub fn execute(&mut self) -> Result<(), InstructionError> {
