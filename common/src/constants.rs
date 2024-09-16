@@ -19,6 +19,8 @@ pub const JACC_OPCODE: u16 = 69;
 pub const JACE_OPCODE: u16 = 70;
 pub const JME_OPCODE: u16 = 71;
 pub const JMC_OPCODE: u16 = 72;
+pub const CALL_OPCODE: u16 = 73;
+pub const RET_OPCODE: u16 = 74;
 
 //Cpu state releate instructions
 pub const HALT_OPCODE: u16 = 65535;

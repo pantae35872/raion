@@ -39,6 +39,7 @@ impl Display for MemoryError {
 
 impl Error for MemoryError {}
 
+#[derive(Debug)]
 pub struct Memory {
     data: Vec<u8>,
 }

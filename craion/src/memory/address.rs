@@ -44,6 +44,12 @@ impl AddAssign<usize> for Address {
     }
 }
 
+impl From<usize> for Address {
+    fn from(value: usize) -> Self {
+        Self(value)
+    }
+}
+
 impl Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:#x}", self.0)

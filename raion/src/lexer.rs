@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Display, num::ParseIntError, str::FromStr};
 
-use crate::token::{ASMToken, InstructionType, RegisterType};
+use crate::token::asm_token::{ASMToken, InstructionType, RegisterType};
 
 #[derive(Debug)]
 pub enum LexerError {

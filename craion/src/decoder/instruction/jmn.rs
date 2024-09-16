@@ -5,7 +5,7 @@ use super::InstructionArgument;
 #[instruction(JMN_OPCODE)]
 pub fn jmn(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     if args.register.get_negative() {
-        args.register.set_ip(args.argument.parse_address()?);
+        parse_and_jump!(args);
     } else {
         args.register.inc_ip(args.instruction_length);
     }

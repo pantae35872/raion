@@ -10,7 +10,7 @@ pub fn jacc(args: &mut InstructionArgument) -> Result<(), super::InstructionErro
     let n_reg2 = args.register.get_general(&reg2)?;
     let (_, overflow) = n_reg1.overflowing_sub(n_reg2);
     if overflow {
-        args.register.set_ip(args.argument.parse_address()?);
+        parse_and_jump!(args);
     } else {
         args.register.inc_ip(args.instruction_length);
     }

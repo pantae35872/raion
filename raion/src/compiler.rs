@@ -1,463 +1,91 @@
-use std::{collections::HashMap, error::Error, fmt::Display};
+use std::{error::Error, fmt::Display};
 
-use common::constants::{
-    MOV_ADD2SP, MOV_DEREF_REG2REG, MOV_NUM2REG, MOV_REG2MEM, MOV_REG2REG, MOV_REG2SP,
-};
+use crate::token::Token;
 
-use crate::token::{ASMToken, InstructionType, RegisterType};
+pub mod asm_compiler;
 
 #[derive(Debug)]
-pub enum CompilerError {
-    UnexpectedToken(Option<ASMToken>, usize),
+pub enum CompilerError<T: Token> {
+    UnexpectedToken(Option<T>, usize),
     UndefinedLabel(String, usize),
     MultipleLabel(String, usize),
+    InvalidArgument(usize),
 }
 
-impl Display for CompilerError {
+impl<T: Token> Display for CompilerError<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnexpectedToken(token, line) => {
                 write!(
                     f,
-                    "Trying to compile with unexpected token `{:?}` at line {}",
-                    token, line
+                    "Trying to compile with unexpected token `{token:?}` at line {line}",
                 )
             }
             Self::UndefinedLabel(label, line) => {
-                write!(f, "Undefied label `{}` at line {}", label, line)
+                write!(f, "Undefied label `{label}` at line {line}")
             }
             Self::MultipleLabel(label, line) => {
                 write!(
                     f,
-                    "the label name `{}` is defined multiple times at line {}",
-                    label, line
+                    "the label name `{label}` is defined multiple times at line {line}",
                 )
+            }
+            Self::InvalidArgument(line) => {
+                write!(f, "invalid argument on line {line}")
             }
         }
     }
 }
 
-impl Error for CompilerError {}
+impl<T: Token> Error for CompilerError<T> {}
 
-enum CurrentSection {
-    Text,
-    Data,
-}
-
-pub struct ASMCompiler {
-    tokens: Vec<ASMToken>,
-    write_pos: usize,
+pub struct CompilerBase<T: Token> {
+    tokens: Vec<T>,
     index: usize,
-    labels: HashMap<String, usize>,
-    label_replaces: Vec<(String, usize, usize)>,
-    text: Vec<u8>,
-    data: Vec<u8>,
-    current_section: CurrentSection,
     line: usize,
 }
 
-impl ASMCompiler {
-    pub fn new(tokens: Vec<ASMToken>) -> Self {
+impl<T: Token> CompilerBase<T> {
+    pub fn new(tokens: Vec<T>) -> Self {
         Self {
             tokens,
-            write_pos: 0,
             index: 0,
-            labels: HashMap::new(),
-            label_replaces: Vec::new(),
-            text: Vec::new(),
-            data: Vec::new(),
-            current_section: CurrentSection::Text,
             line: 1,
         }
     }
 
-    pub fn write(&mut self, data: &[u8]) {
-        match self.current_section {
-            CurrentSection::Data => {
-                self.data.extend_from_slice(data);
-                self.write_pos += data.len();
-            }
-            CurrentSection::Text => {
-                self.text.extend_from_slice(data);
-                self.write_pos += data.len();
-            }
-        }
-    }
-
-    pub fn write_instruction(&mut self, opcode: u16, argument: &[u8]) {
-        let opcode = opcode.to_le_bytes();
-        let instruction_size = argument.len() + 3;
-        self.write(&[instruction_size as u8, opcode[0], opcode[1]]);
-        self.write(argument);
-    }
-    fn peek(&self, offset: usize) -> Option<&ASMToken> {
+    fn peek(&self, offset: usize) -> Option<&T> {
         return self.tokens.get(self.index + offset);
     }
 
-    fn consume(&mut self) -> Option<&ASMToken> {
+    fn consume(&mut self) -> Option<&T> {
         if let Some(token) = self.tokens.get(self.index) {
             self.index += 1;
+            if token.is_newline() {
+                self.line += 1;
+            }
             return Some(token);
         } else {
             return None;
         }
     }
 
-    fn compile_mov(&mut self, instruction_opcode: u16) -> Result<(), CompilerError> {
-        match self
-            .peek(1)
-            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-        {
-            ASMToken::Register(register) => {
-                let token = self
-                    .peek(2)
-                    .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
-                if *token != ASMToken::Comma {
-                    return Err(CompilerError::UnexpectedToken(
-                        token.clone().into(),
-                        self.line,
-                    ));
-                }
-
-                match self
-                    .peek(3)
-                    .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                {
-                    ASMToken::Register(register1) => {
-                        if *register == RegisterType::SP {
-                            self.write_instruction(
-                                instruction_opcode,
-                                &[MOV_REG2SP, register1.to_byte()],
-                            );
-                        } else {
-                            self.write_instruction(
-                                instruction_opcode,
-                                &[MOV_REG2REG, register.to_byte(), register1.to_byte()],
-                            );
-                        }
-                    }
-                    ASMToken::Number(number) => {
-                        if *register == RegisterType::SP {
-                            let mut arg = [MOV_ADD2SP].to_vec();
-                            arg.extend_from_slice(&number.to_le_bytes());
-                            self.write_instruction(instruction_opcode, &arg);
-                        } else {
-                            let mut arg = [MOV_NUM2REG].to_vec();
-                            arg.push(register.to_byte());
-                            arg.extend_from_slice(&number.to_le_bytes());
-                            self.write_instruction(instruction_opcode, &arg);
-                        }
-                    }
-                    ASMToken::Identifier(ident) => {
-                        let ident = ident.clone();
-                        self.write_instruction(
-                            instruction_opcode,
-                            &[MOV_NUM2REG, register.to_byte(), 0, 0, 0, 0, 0, 0, 0, 0],
-                        );
-                        self.label_replaces
-                            .push((ident, self.write_pos - 8, self.line));
-                    }
-                    ASMToken::LBracket => {
-                        match self
-                            .peek(4)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                        {
-                            ASMToken::Register(reg) => {
-                                self.write_instruction(
-                                    instruction_opcode,
-                                    &[MOV_DEREF_REG2REG, register.to_byte(), reg.to_byte()],
-                                );
-                            }
-                            unexpected => {
-                                return Err(CompilerError::UnexpectedToken(
-                                    Some(unexpected.clone()),
-                                    self.line,
-                                ))
-                            }
-                        };
-
-                        let token = self
-                            .peek(5)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
-                        if *token != ASMToken::RBracket {
-                            return Err(CompilerError::UnexpectedToken(
-                                token.clone().into(),
-                                self.line,
-                            ));
-                        }
-                        self.consume();
-                        self.consume();
-                    }
-                    token => {
-                        return Err(CompilerError::UnexpectedToken(
-                            token.clone().into(),
-                            self.line,
-                        ))
-                    }
-                };
-            }
-            ASMToken::Number(address) => {
-                let token = self
-                    .peek(2)
-                    .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
-                if *token != ASMToken::Comma {
-                    return Err(CompilerError::UnexpectedToken(
-                        token.clone().into(),
-                        self.line,
-                    ));
-                }
-
-                let register1 = match self
-                    .peek(3)
-                    .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                {
-                    ASMToken::Register(reg) => reg,
-                    token => {
-                        return Err(CompilerError::UnexpectedToken(
-                            token.clone().into(),
-                            self.line,
-                        ))
-                    }
-                };
-                let mut arg = [MOV_REG2MEM].to_vec();
-                arg.extend_from_slice(&address.to_le_bytes());
-                arg.push(register1.to_byte());
-                self.write_instruction(instruction_opcode, &arg);
-            }
-            token => {
-                return Err(CompilerError::UnexpectedToken(
-                    token.clone().into(),
-                    self.line,
-                ))
-            }
-        };
-
-        self.consume();
-        self.consume();
-        self.consume();
-        self.consume();
-        return Ok(());
+    pub fn expect_token(&mut self, expected: T) -> Result<(), CompilerError<T>> {
+        let token = self
+            .peek(0)
+            .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
+        if *token == expected {
+            self.consume();
+            return Ok(());
+        } else {
+            return Err(CompilerError::UnexpectedToken(
+                Some(token.clone()),
+                self.line,
+            ));
+        }
     }
 
-    fn replace_labels(&mut self) -> Result<(), CompilerError> {
-        for (label, pos, line) in &self.label_replaces {
-            let data = &mut self.text[*pos..(*pos + 8)];
-            let label_data = self
-                .labels
-                .get(label)
-                .ok_or(CompilerError::UndefinedLabel(label.clone(), *line))?;
-            data.copy_from_slice(&(*label_data as u64).to_le_bytes());
-        }
-        return Ok(());
-    }
-
-    pub fn compile(mut self) -> Result<(Vec<u8>, Vec<u8>), CompilerError> {
-        while let Some(token) = self.peek(0).cloned() {
-            match token {
-                ASMToken::Label(label) => {
-                    if let Some(_) = self.labels.insert(label.clone(), self.write_pos) {
-                        return Err(CompilerError::MultipleLabel(label.clone(), self.line));
-                    }
-                    self.consume();
-                }
-                ASMToken::Identifier(identifier) => {
-                    if identifier == "section" {
-                        self.consume();
-                        if self
-                            .peek(0)
-                            .is_some_and(|e| *e == ASMToken::Identifier("text".to_string()))
-                        {
-                            self.current_section = CurrentSection::Text;
-                        } else if self
-                            .peek(0)
-                            .is_some_and(|e| *e == ASMToken::Identifier("data".to_string()))
-                        {
-                            self.current_section = CurrentSection::Data;
-                        }
-                        self.consume();
-                    }
-                }
-                ASMToken::String(string) => {
-                    self.write(string.as_bytes());
-                    self.consume();
-                }
-                ASMToken::Instruction(instruction) => match instruction {
-                    InstructionType::Mov => self.compile_mov(instruction.opcode())?,
-                    InstructionType::Inc
-                    | InstructionType::Pop
-                    | InstructionType::Push
-                    | InstructionType::Outc => {
-                        let register = match self
-                            .peek(1)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                        {
-                            ASMToken::Register(reg) => reg,
-                            token => {
-                                return Err(CompilerError::UnexpectedToken(
-                                    token.clone().into(),
-                                    self.line,
-                                ))
-                            }
-                        };
-                        self.write_instruction(instruction.opcode(), &[register.to_byte()]);
-                        self.consume();
-                        self.consume();
-                    }
-                    InstructionType::Cmp | InstructionType::Add | InstructionType::Sub => {
-                        let register = match self
-                            .peek(1)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                        {
-                            ASMToken::Register(reg) => reg,
-                            token => {
-                                return Err(CompilerError::UnexpectedToken(
-                                    token.clone().into(),
-                                    self.line,
-                                ))
-                            }
-                        };
-                        let token = self
-                            .peek(2)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
-                        if *token != ASMToken::Comma {
-                            return Err(CompilerError::UnexpectedToken(
-                                token.clone().into(),
-                                self.line,
-                            ));
-                        }
-                        let register1 = match self
-                            .peek(3)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                        {
-                            ASMToken::Register(reg) => reg,
-                            token => {
-                                return Err(CompilerError::UnexpectedToken(
-                                    token.clone().into(),
-                                    self.line,
-                                ))
-                            }
-                        };
-                        self.write_instruction(
-                            instruction.opcode(),
-                            &[register.to_byte(), register1.to_byte()],
-                        );
-                        self.consume();
-                        self.consume();
-                        self.consume();
-                        self.consume();
-                    }
-                    InstructionType::Jacn
-                    | InstructionType::Jace
-                    | InstructionType::Jacc
-                    | InstructionType::Jacz => {
-                        let register = match self
-                            .peek(1)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                        {
-                            ASMToken::Register(reg) => reg,
-                            token => {
-                                return Err(CompilerError::UnexpectedToken(
-                                    token.clone().into(),
-                                    self.line,
-                                ))
-                            }
-                        };
-                        let token = self
-                            .peek(2)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
-                        if *token != ASMToken::Comma {
-                            return Err(CompilerError::UnexpectedToken(
-                                token.clone().into(),
-                                self.line,
-                            ));
-                        }
-                        let register1 = match self
-                            .peek(3)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                        {
-                            ASMToken::Register(reg) => reg,
-                            token => {
-                                return Err(CompilerError::UnexpectedToken(
-                                    token.clone().into(),
-                                    self.line,
-                                ))
-                            }
-                        };
-                        let token = self
-                            .peek(4)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?;
-                        if *token != ASMToken::Comma {
-                            return Err(CompilerError::UnexpectedToken(
-                                token.clone().into(),
-                                self.line,
-                            ));
-                        }
-                        let mut arg = [register.to_byte(), register1.to_byte()].to_vec();
-                        arg.extend_from_slice(&0u64.to_le_bytes());
-                        self.write_instruction(instruction.opcode(), &arg);
-                        let label = match self
-                            .peek(5)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                        {
-                            ASMToken::Identifier(label) => label,
-                            token => {
-                                return Err(CompilerError::UnexpectedToken(
-                                    token.clone().into(),
-                                    self.line,
-                                ))
-                            }
-                        };
-                        self.label_replaces
-                            .push((label.clone(), self.write_pos - 8, self.line));
-                        self.consume();
-                        self.consume();
-                        self.consume();
-                        self.consume();
-                        self.consume();
-                        self.consume();
-                    }
-                    InstructionType::Jmp
-                    | InstructionType::Jmc
-                    | InstructionType::Jmz
-                    | InstructionType::Jme
-                    | InstructionType::Jmn => {
-                        self.write_instruction(instruction.opcode(), &0u64.to_le_bytes());
-                        let label = match self
-                            .peek(1)
-                            .ok_or(CompilerError::UnexpectedToken(None, self.line))?
-                        {
-                            ASMToken::Identifier(label) => label,
-                            token => {
-                                return Err(CompilerError::UnexpectedToken(
-                                    token.clone().into(),
-                                    self.line,
-                                ))
-                            }
-                        };
-                        self.label_replaces
-                            .push((label.clone(), self.write_pos - 8, self.line));
-                        self.consume();
-                        self.consume();
-                    }
-                    _ => {
-                        self.write_instruction(instruction.opcode(), &[]);
-                        self.consume();
-                    }
-                },
-                ASMToken::NewLine => {
-                    self.consume();
-                }
-                _ => {
-                    return Err(CompilerError::UnexpectedToken(
-                        token.clone().into(),
-                        self.line,
-                    ))
-                }
-            }
-
-            self.line += 1;
-        }
-        self.replace_labels()?;
-        return Ok((self.text, self.data));
+    pub fn current_line(&self) -> usize {
+        return self.line;
     }
 }

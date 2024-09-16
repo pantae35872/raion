@@ -1,5 +1,6 @@
 use crate::memory::address::Address;
 
+#[derive(Debug)]
 pub struct RetStack {
     data: Vec<Address>,
 }

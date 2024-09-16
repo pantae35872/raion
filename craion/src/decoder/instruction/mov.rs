@@ -59,9 +59,11 @@ pub fn mov(args: &mut InstructionArgument) -> Result<(), super::InstructionError
             )?;
         }
         MOV_ADD2SP => {
+            args.argument.parse_register()?;
             args.register.set_sp(args.argument.parse_address()?);
         }
         MOV_REG2SP => {
+            args.argument.parse_register()?;
             args.register.set_sp(Address::new(
                 args.register
                     .get_general(&args.argument.parse_register()?)? as usize,

@@ -1,12 +1,12 @@
-export print
-
 fn start -> {
+  mov a64, hello_world
+  call print
+  mov a64, second
   call print
   halt
 }
 
 fn print -> {
-  mov a64, hello_world
   push b64
   push c64
   mov c64, 0
@@ -24,4 +24,8 @@ end:
 
 const hello_world -> { 
   "Hello, World!\n\0"
+}
+
+const second -> { 
+  "Second, Message\n\0"
 }

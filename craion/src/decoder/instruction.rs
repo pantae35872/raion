@@ -14,7 +14,21 @@ use super::{
     DecoderError,
 };
 
+macro_rules! parse_and_jump {
+    ($args:expr) => {
+        let section_hash = $args.argument.parse_u64()?;
+        let current_section = $args
+            .section_manager
+            .get_section_hash(section_hash)
+            .ok_or(super::InstructionError::InvalidSection(section_hash))?;
+        $args
+            .register
+            .set_ip(current_section.mem_start() + $args.argument.parse_u16()?.into());
+    };
+}
+
 mod add;
+mod call;
 mod cmp;
 mod halt;
 mod inc;
@@ -31,6 +45,7 @@ mod mov;
 mod outc;
 mod pop;
 mod push;
+mod ret;
 mod sub;
 
 #[derive(Debug)]
@@ -42,6 +57,8 @@ pub enum InstructionError {
     AddressToRegisterError(usize),
     InvalidSubOpCode(u16, u8),
     InvalidSection(u64),
+    EmptyRetStack,
+    NotFunctionSection,
 }
 
 impl Display for InstructionError {
@@ -69,7 +86,9 @@ impl Display for InstructionError {
                 "Trying to put an address to a register with size that is not 64 bit; register size: {}",
                 size * 8
             ),
-            Self::InvalidSection(hash) => write!(f, "Trying to access invalid section with hash: {}", hash)
+            Self::InvalidSection(hash) => write!(f, "Trying to access invalid section with hash: {}", hash),
+            Self::EmptyRetStack => write!(f, "Executing return insturction on an empty return stack"),
+            Self::NotFunctionSection => write!(f, "Trying to call a section thats not a function"),
         }
     }
 }
@@ -94,6 +113,7 @@ impl From<ArgumentParseError> for InstructionError {
     }
 }
 
+#[derive(Debug)]
 pub struct InstructionArgument<'a> {
     pub register: &'a mut RegisterFile,
     pub memory: &'a mut Memory,
@@ -103,6 +123,7 @@ pub struct InstructionArgument<'a> {
     pub instruction_length: usize,
 }
 
+#[derive(Debug)]
 pub struct Instruction<'a> {
     instruction_executor: fn(&mut InstructionArgument) -> Result<(), InstructionError>,
     instruction_argument: InstructionArgument<'a>,

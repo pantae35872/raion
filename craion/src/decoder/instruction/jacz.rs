@@ -10,7 +10,7 @@ pub fn jacz(args: &mut InstructionArgument) -> Result<(), super::InstructionErro
     let n_reg2 = args.register.get_general(&reg2)?;
     let (result, _) = n_reg1.overflowing_sub(n_reg2);
     if result == 0 {
-        args.register.set_ip(args.argument.parse_address()?);
+        parse_and_jump!(args);
     } else {
         args.register.inc_ip(args.instruction_length);
     }

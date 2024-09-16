@@ -35,6 +35,7 @@ impl From<RegisterParseError> for ArgumentParseError {
 
 impl Error for ArgumentParseError {}
 
+#[derive(Debug)]
 pub struct Argument<'a> {
     reader: BufferReader<'a>,
 }

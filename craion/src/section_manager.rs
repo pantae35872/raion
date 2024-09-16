@@ -7,18 +7,19 @@ use xxhash_rust::xxh3::xxh3_64;
 use crate::memory::{address::Address, Memory};
 
 #[derive(Debug, Clone)]
-pub struct ParsedSection {
+pub struct LoadedSection {
     ty: SectionType,
     mem_start: Address,
     mem_end: Address,
 }
 
+#[derive(Debug)]
 pub struct SectionManager {
-    sections: NoHashHashMap<u64, ParsedSection>,
+    sections: NoHashHashMap<u64, LoadedSection>,
     write_pos: Address,
 }
 
-impl ParsedSection {
+impl LoadedSection {
     pub fn section_type(&self) -> SectionType {
         return self.ty;
     }
@@ -40,15 +41,15 @@ impl SectionManager {
         }
     }
 
-    pub fn get_section_hash(&self, hash: u64) -> Option<&ParsedSection> {
+    pub fn get_section_hash(&self, hash: u64) -> Option<&LoadedSection> {
         return self.sections.get(&hash);
     }
 
-    pub fn get_section<T: AsRef<str>>(&self, name: T) -> Option<&ParsedSection> {
+    pub fn get_section<T: AsRef<str>>(&self, name: T) -> Option<&LoadedSection> {
         return self.get_section_hash(xxh3_64(name.as_ref().as_bytes()));
     }
 
-    pub fn set_section_hash(&mut self, hash: u64, section: ParsedSection) {
+    pub fn set_section_hash(&mut self, hash: u64, section: LoadedSection) {
         self.sections.insert(hash, section);
     }
 
@@ -57,14 +58,14 @@ impl SectionManager {
         section: &SinSection,
         data: &[u8],
         memory: &mut Memory,
-    ) -> &ParsedSection {
+    ) -> &LoadedSection {
         let data = &data[section.start() as usize..=section.end() as usize];
         memory
             .mem_sets(self.write_pos, data)
             .expect("Not enough memory to load the section");
         self.set_section_hash(
             section.hash(),
-            ParsedSection {
+            LoadedSection {
                 ty: section.section_type(),
                 mem_start: self.write_pos,
                 mem_end: self.write_pos + data.len() - 1,

@@ -1,5 +1,6 @@
 use std::u16;
 
+#[derive(Debug)]
 pub struct BufferReader<'a> {
     buffer: &'a [u8],
     read_pos: usize,
