@@ -53,7 +53,7 @@ pub fn decode<'a>(memory: &'a mut Memory, register: &'a mut RegisterFile, argume
     if instruction_length < 3 {
         return Err(DecoderError::InvalidIl(register.get_ip(), instruction_length)); 
     }
-    let opcode = u16::from_le_bytes(<[u8; 2]>::try_from(&instruction[1..=2]).unwrap());
+    let opcode = u16::from_le_bytes([instruction[1], instruction[2]]);
     let argument = &instruction[3..instruction_length];
     argument_memory.set_arguement(argument);
     return Ok(Instruction::decode(opcode, register, memory, Argument::new(argument_memory.get_argument()), ret_stack, section_manager, instruction_length)?);
