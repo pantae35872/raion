@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use argument_parser::{ArgumentParser, ArgumentType, ParsedArgument};
+use argument_parser::{ArgumentParser, ArgumentType, ParsedArguments};
 use common::{
     constants::{
         MOV_ADD2SP, MOV_DEREF_REG2REG, MOV_NUM2REG, MOV_REG2REG, MOV_REG2SP, MOV_SECTION_ADDR_2REG,
     },
     sin::sections::{SectionType, SinSection},
-    VecUtils,
 };
 use xxhash_rust::xxh3::xxh3_64;
 
@@ -71,7 +70,7 @@ impl ASMCompiler {
         return Ok(());
     }
 
-    fn try_parse_argument(&self, arg_types: &[ArgumentType]) -> Option<ParsedArgument> {
+    fn try_parse_argument(&self, arg_types: &[ArgumentType]) -> Option<ParsedArguments> {
         let mut parser = ArgumentParser::new(&self.base);
         for arg_type in arg_types {
             parser = parser.parse(*arg_type);
@@ -114,7 +113,7 @@ impl ASMCompiler {
                 }
                 ASMToken::Instruction(instruction) => {
                     self.base.consume();
-                    let mut argument = match instruction {
+                    let (argument, mut label_replaces) = match instruction {
                         InstructionType::Mov => {
                             let mut subopcode = MOV_REG2REG;
                             let mut args = self
@@ -158,7 +157,7 @@ impl ASMCompiler {
                                     ])
                                 })
                                 .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
-                            args.argument.insert(0, subopcode);
+                            args.insert(0, vec![subopcode]);
                             args
                         }
                         InstructionType::Add | InstructionType::Sub | InstructionType::Cmp => self
@@ -178,10 +177,7 @@ impl ASMCompiler {
                             let mut args = self
                                 .try_parse_argument(&[ArgumentType::Label])
                                 .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
-                            args.argument.insert_slice(0, &function_hash.to_le_bytes());
-                            for label_replace in args.label_replaces.iter_mut() {
-                                label_replace.pos += 8;
-                            }
+                            args.insert(0, function_hash.to_le_bytes().to_vec());
                             args
                         }
                         InstructionType::Call => self
@@ -198,27 +194,18 @@ impl ASMCompiler {
                                     ArgumentType::Label,
                                 ])
                                 .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
-                            args.argument.insert_slice(2, &function_hash.to_le_bytes());
-                            for label_replace in args.label_replaces.iter_mut() {
-                                label_replace.pos += 8;
-                            }
+                            args.insert(2, function_hash.to_le_bytes().to_vec());
                             args
                         }
-                        InstructionType::Ret | InstructionType::Halt => ParsedArgument::default(),
-                    };
-                    //if let Some(label_replaces) = label_replaces.as_mut() {
-                    //    for label_replace in label_replaces.iter_mut() {
-                    //        label_replace.1 += self.write_pos + 3 + 8;
-                    //    }
-                    //    label_replacess.extend_from_slice(label_replaces);
-                    //}
-                    self.write_instruction(instruction.opcode(), &argument.argument);
-
-                    for label_replace in argument.label_replaces.iter_mut() {
-                        label_replace.pos =
-                            self.write_pos - (argument.argument.len() - label_replace.pos);
+                        InstructionType::Ret | InstructionType::Halt => ParsedArguments::default(),
                     }
-                    label_replacess.extend_from_slice(&argument.label_replaces);
+                    .finalize();
+                    self.write_instruction(instruction.opcode(), &argument);
+
+                    for label_replace in label_replaces.iter_mut() {
+                        label_replace.pos = self.write_pos - (argument.len() - label_replace.pos);
+                    }
+                    label_replacess.extend_from_slice(&label_replaces);
                     self.consume_until_newline();
                 }
                 ASMToken::String(string) => {

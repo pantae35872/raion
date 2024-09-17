@@ -1,8 +1,6 @@
 fn start -> {
   mov a64, hello_world
   call print
-  mov a64, second
-  call print
   halt
 }
 
