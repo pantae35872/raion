@@ -1,5 +1,3 @@
-use std::process::Termination;
-
 use common::sin::sections::SinSection;
 
 use crate::{
