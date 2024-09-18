@@ -58,7 +58,7 @@ pub enum InstructionError {
     InvalidSubOpCode(u16, u8),
     InvalidSection(u64),
     EmptyRetStack,
-    NotFunctionSection,
+    NotProcedureSection,
 }
 
 impl Display for InstructionError {
@@ -88,7 +88,7 @@ impl Display for InstructionError {
             ),
             Self::InvalidSection(hash) => write!(f, "Trying to access invalid section with hash: {}", hash),
             Self::EmptyRetStack => write!(f, "Executing return insturction on an empty return stack"),
-            Self::NotFunctionSection => write!(f, "Trying to call a section thats not a function"),
+            Self::NotProcedureSection => write!(f, "Trying to call a section thats not a procedure"),
         }
     }
 }

@@ -1,11 +1,13 @@
-use std::{error::Error, fmt::Display, num::ParseIntError, str::FromStr};
+use std::{error::Error, fmt::Display, num::ParseIntError};
 
-use crate::token::asm_token::{ASMToken, InstructionType, RegisterType};
+use crate::token::Token;
+
+pub mod asm_lexer;
 
 #[derive(Debug)]
 pub enum LexerError {
     InvalidToken(String),
-    InvalidNumber(ParseIntError),
+    InvalidInterger(ParseIntError),
     InvalidEscapeSequence(String),
     ExpectedEndDoubleQuote(Option<char>),
     EndOfBuffer,
@@ -15,7 +17,7 @@ impl Display for LexerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidToken(buffer) => write!(f, "Trying to tokenize invalid input: {}", buffer),
-            Self::InvalidNumber(e) => write!(f, "Trying to tokenize invalid number, {}", e),
+            Self::InvalidInterger(e) => write!(f, "Trying to tokenize invalid number, {}", e),
             Self::InvalidEscapeSequence(escape_sequence) => {
                 write!(f, "Invalid escape sequence: '{}'", escape_sequence)
             }
@@ -34,16 +36,16 @@ impl Error for LexerError {}
 
 impl From<ParseIntError> for LexerError {
     fn from(value: ParseIntError) -> Self {
-        return Self::InvalidNumber(value);
+        return Self::InvalidInterger(value);
     }
 }
 
-pub struct Lexer<'a> {
+pub struct LexerBase<'a> {
     buffer: &'a str,
     index: usize,
 }
 
-impl<'a> Lexer<'a> {
+impl<'a> LexerBase<'a> {
     pub fn new(buffer: &'a str) -> Self {
         Self { buffer, index: 0 }
     }
@@ -65,187 +67,122 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn tokenize_asm(mut self) -> Result<Vec<ASMToken>, LexerError> {
-        let mut tokens = Vec::new();
+    fn consumes(&mut self, count: usize) {
+        for _ in 0..count {
+            self.consume();
+        }
+    }
+
+    fn peek_match(&self, matchs: &str) -> bool {
+        let mut valid = true;
+        for (index, charactor_match) in matchs.chars().enumerate() {
+            if !self.peek(index).is_some_and(|e| e == charactor_match) {
+                valid = false;
+            }
+        }
+        return valid;
+    }
+
+    fn parse_interger<T: Token>(&mut self) -> Result<T, LexerError> {
         let mut buffer = String::new();
+        if self.peek_match("0x") {
+            self.consume();
+            self.consume();
 
-        while let Some(value) = self.peek(0) {
-            if value.is_alphabetic() {
+            while self.peek(0).is_some_and(|e| e.is_digit(16) || e == '_') {
+                if self.peek(0).is_some_and(|e| e == '_') {
+                    self.consume();
+                    continue;
+                }
                 buffer.push(self.consume().unwrap());
-                while self
-                    .peek(0)
-                    .is_some_and(|e| e.is_alphanumeric() || e == '_')
-                {
-                    buffer.push(self.consume().unwrap());
-                }
-
-                if self.peek(0).is_some_and(|e| e == ':') {
-                    self.consume();
-                    tokens.push(ASMToken::Label(buffer.clone()));
-                    buffer.clear();
-                    continue;
-                }
-
-                if let Ok(instruction_type) = InstructionType::from_str(&buffer) {
-                    tokens.push(ASMToken::Instruction(instruction_type));
-                    buffer.clear();
-                    continue;
-                }
-
-                if let Ok(register_type) = RegisterType::from_str(&buffer) {
-                    tokens.push(ASMToken::Register(register_type));
-                    buffer.clear();
-                    continue;
-                }
-
-                tokens.push(ASMToken::Identifier(buffer.clone()));
-                buffer.clear();
-                continue;
             }
-            if value.is_digit(10) {
+
+            return Ok(Token::from_u64(
+                u64::from_str_radix(&buffer, 16).map_err(LexerError::InvalidInterger)?,
+            ));
+        }
+        if self.peek_match("0o") {
+            self.consume();
+            self.consume();
+
+            while self.peek(0).is_some_and(|e| e.is_digit(8)) {
+                if self.peek(0).is_some_and(|e| e == '_') {
+                    self.consume();
+                    continue;
+                }
+
                 buffer.push(self.consume().unwrap());
-                if value == '0' && self.peek(0).is_some_and(|e| e == 'x') {
+            }
+
+            return Ok(Token::from_u64(
+                u64::from_str_radix(&buffer, 8).map_err(LexerError::InvalidInterger)?,
+            ));
+        }
+        if self.peek_match("0b") {
+            self.consumes(2);
+
+            while self.peek(0).is_some_and(|e| e.is_digit(2)) {
+                if self.peek(0).is_some_and(|e| e == '_') {
                     self.consume();
-                    while self.peek(0).is_some_and(|e| e.is_digit(16)) {
-                        buffer.push(self.consume().unwrap());
-                    }
-                    tokens.push(ASMToken::Number(u64::from_str_radix(&buffer, 16)?));
-                    buffer.clear();
                     continue;
                 }
-                while self.peek(0).is_some_and(|e| e.is_digit(16)) {
-                    buffer.push(self.consume().unwrap());
-                }
-                tokens.push(ASMToken::Number(buffer.parse::<u64>()?));
-                buffer.clear();
+
+                buffer.push(self.consume().unwrap());
+            }
+
+            return Ok(Token::from_u64(
+                u64::from_str_radix(&buffer, 2).map_err(LexerError::InvalidInterger)?,
+            ));
+        }
+
+        buffer.push(self.consume().unwrap());
+
+        while self.peek(0).is_some_and(|e| e.is_digit(10) || e == '_') {
+            if self.peek(0).is_some_and(|e| e == '_') {
+                self.consume();
                 continue;
             }
-            if value == ',' {
-                self.consume();
-                tokens.push(ASMToken::Comma);
-                continue;
+
+            buffer.push(self.consume().unwrap());
+        }
+        return Ok(Token::from_u64(
+            buffer.parse::<u64>().map_err(LexerError::InvalidInterger)?,
+        ));
+    }
+
+    fn parse_string<T: Token>(&mut self) -> Result<T, LexerError> {
+        let mut buffer = String::new();
+        self.consume();
+        loop {
+            while self
+                .peek(0)
+                .is_some_and(|e| e != '\\' && e != '\"' && e != '\n')
+            {
+                buffer.push(self.consume().unwrap());
             }
-            if value == '\n' {
-                self.consume();
-                tokens.push(ASMToken::NewLine);
-                continue;
-            }
-            if value == ';' {
-                self.consume();
-                while self.peek(0).is_some_and(|e| e != '\n') {
+
+            if self.peek(0).is_some_and(|e| e == '\"') && self.peek(1).is_some_and(|e| e == '\"') {
+                self.consumes(2);
+
+                if self.peek(0).is_some_and(|e| e == '\n') {
                     self.consume();
                 }
-                continue;
-            }
-            if value == '[' {
-                self.consume();
-                tokens.push(ASMToken::LBracket);
-                continue;
-            }
-            if value == ']' {
-                self.consume();
-                tokens.push(ASMToken::RBracket);
-                continue;
-            }
-            if value == '{' {
-                self.consume();
-                tokens.push(ASMToken::LCurly);
-                continue;
-            }
-            if value == '}' {
-                self.consume();
-                tokens.push(ASMToken::RCurly);
-                continue;
-            }
-            if value == '-' && self.peek(1).is_some_and(|e| e == '>') {
-                self.consume();
-                self.consume();
-                tokens.push(ASMToken::Arrow);
-                continue;
-            }
-            if value == '\"' {
-                self.consume();
                 loop {
-                    while self
-                        .peek(0)
-                        .is_some_and(|e| e != '\\' && e != '\"' && e != '\n')
-                    {
+                    while self.peek(0).is_some_and(|e| e != '\\' && e != '\"') {
                         buffer.push(self.consume().unwrap());
                     }
 
-                    if self.peek(0).is_some_and(|e| e == '\"')
-                        && self.peek(1).is_some_and(|e| e == '\"')
-                    {
-                        self.consume();
-                        self.consume();
-
-                        if self.peek(0).is_some_and(|e| e == '\n') {
+                    if self.peek_match("\"\"\"") {
+                        if self.peek(3).is_some_and(|e| e == '\"') {
+                            buffer.push('\"');
                             self.consume();
                         }
-                        loop {
-                            while self.peek(0).is_some_and(|e| e != '\\' && e != '\"') {
-                                buffer.push(self.consume().unwrap());
-                            }
-
-                            if self.peek(0).is_some_and(|e| e == '\"')
-                                && self.peek(1).is_some_and(|e| e == '\"')
-                                && self.peek(2).is_some_and(|e| e == '\"')
-                            {
-                                if self.peek(3).is_some_and(|e| e == '\"') {
-                                    buffer.push('\"');
-                                    self.consume();
-                                }
-                                if self.peek(3).is_some_and(|e| e == '\"') {
-                                    buffer.push('\"');
-                                    self.consume();
-                                }
-                                self.consume();
-                                self.consume();
-                                self.consume();
-                                break;
-                            }
-
-                            if self.peek(0).is_some_and(|e| e == '\\') {
-                                self.consume();
-                                match self.consume().ok_or(LexerError::EndOfBuffer)? {
-                                    'b' => buffer.push('\u{08}'),
-                                    't' => buffer.push('\u{09}'),
-                                    'n' => buffer.push('\u{0A}'),
-                                    'f' => buffer.push('\u{0C}'),
-                                    'r' => buffer.push('\u{0D}'),
-                                    '\"' => buffer.push('\u{22}'),
-                                    '0' => buffer.push('\u{0}'),
-                                    '\\' => buffer.push('\u{5C}'),
-                                    _ => {
-                                        while self
-                                            .peek(0)
-                                            .is_some_and(|e| e.is_whitespace() || e == '\n')
-                                        {
-                                            self.consume();
-                                        }
-                                    }
-                                }
-                                continue;
-                            }
-
-                            if self.peek(0).is_some_and(|e| e == '\"')
-                                || self.peek(1).is_some_and(|e| e == '\"')
-                            {
-                                if self.peek(0).is_some_and(|e| e == '\"')
-                                    && self.peek(1).is_some_and(|e| e == '\"')
-                                {
-                                    buffer.push(self.consume().unwrap());
-                                }
-                                buffer.push(self.consume().unwrap());
-                                continue;
-                            }
-                            break;
+                        if self.peek(3).is_some_and(|e| e == '\"') {
+                            buffer.push('\"');
+                            self.consume();
                         }
+                        self.consumes(3);
                         break;
-                    }
-
-                    if self.peek(0).is_some_and(|e| e == '\n') {
-                        return Err(LexerError::ExpectedEndDoubleQuote(Some('\n')));
                     }
 
                     if self.peek(0).is_some_and(|e| e == '\\') {
@@ -256,38 +193,63 @@ impl<'a> Lexer<'a> {
                             'n' => buffer.push('\u{0A}'),
                             'f' => buffer.push('\u{0C}'),
                             'r' => buffer.push('\u{0D}'),
-                            '"' => buffer.push('\u{22}'),
+                            '\"' => buffer.push('\u{22}'),
                             '0' => buffer.push('\u{0}'),
                             '\\' => buffer.push('\u{5C}'),
-                            invalid_escape => {
-                                return Err(LexerError::InvalidEscapeSequence(format!(
-                                    "\\{}",
-                                    invalid_escape
-                                )))
+                            _ => {
+                                while self.peek(0).is_some_and(|e| e.is_whitespace() || e == '\n') {
+                                    self.consume();
+                                }
                             }
                         }
                         continue;
                     }
-                    if self.peek(0).is_some_and(|e| e == '\"') {
-                        self.consume();
-                    } else {
-                        return Err(LexerError::ExpectedEndDoubleQuote(self.peek(0)));
+
+                    if self.peek(0).is_some_and(|e| e == '\"')
+                        || self.peek(1).is_some_and(|e| e == '\"')
+                    {
+                        if self.peek_match("\"\"") {
+                            buffer.push(self.consume().unwrap());
+                        }
+                        buffer.push(self.consume().unwrap());
+                        continue;
                     }
                     break;
                 }
-
-                tokens.push(ASMToken::String(buffer.clone()));
-                buffer.clear();
-                continue;
+                break;
             }
 
-            if value.is_whitespace() {
+            if self.peek(0).is_some_and(|e| e == '\n') {
+                return Err(LexerError::ExpectedEndDoubleQuote(Some('\n')));
+            }
+
+            if self.peek(0).is_some_and(|e| e == '\\') {
                 self.consume();
+                match self.consume().ok_or(LexerError::EndOfBuffer)? {
+                    'b' => buffer.push('\u{08}'),
+                    't' => buffer.push('\u{09}'),
+                    'n' => buffer.push('\u{0A}'),
+                    'f' => buffer.push('\u{0C}'),
+                    'r' => buffer.push('\u{0D}'),
+                    '"' => buffer.push('\u{22}'),
+                    '0' => buffer.push('\u{0}'),
+                    '\\' => buffer.push('\u{5C}'),
+                    invalid_escape => {
+                        return Err(LexerError::InvalidEscapeSequence(format!(
+                            "\\{}",
+                            invalid_escape
+                        )))
+                    }
+                }
                 continue;
             }
-            buffer.push(self.consume().unwrap());
-            return Err(LexerError::InvalidToken(buffer));
+            if self.peek(0).is_some_and(|e| e == '\"') {
+                self.consume();
+            } else {
+                return Err(LexerError::ExpectedEndDoubleQuote(self.peek(0)));
+            }
+            break;
         }
-        return Ok(tokens);
+        return Ok(Token::from_string(buffer));
     }
 }

@@ -59,7 +59,7 @@ impl SectionManager {
         data: &[u8],
         memory: &mut Memory,
     ) -> &LoadedSection {
-        let data = &data[section.start() as usize..=section.end() as usize];
+        let data = &data[section.start() as usize..section.end() as usize];
         memory
             .mem_sets(self.write_pos, data)
             .expect("Not enough memory to load the section");

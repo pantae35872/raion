@@ -1,0 +1,12 @@
+import std;
+
+module abc;
+
+proc main():u64 -> {
+  std.print("Hello World!");
+  return 0;
+}
+
+proc add(u64 num1, u64 num2):u64 -> {
+  return num1 + num2;
+}

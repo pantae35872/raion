@@ -19,7 +19,7 @@ pub enum ArgumentType {
 
 enum ParsedArgument {
     Register(RegisterType),
-    Number(u64),
+    Interger(u64),
     Section(u64),
     Label(String),
     Buffer(Vec<u8>),
@@ -52,7 +52,7 @@ impl ParsedArguments {
 
         for arg in self.arguments {
             match arg {
-                ParsedArgument::Number(data) | ParsedArgument::Section(data) => {
+                ParsedArgument::Interger(data) | ParsedArgument::Section(data) => {
                     buffer.extend_from_slice(&data.to_le_bytes())
                 }
                 ParsedArgument::Register(register) => buffer.push(register.to_byte()),
@@ -95,7 +95,7 @@ impl<'a> ArgumentParser<'a> {
         for (i, argument) in self.arguments_parse.iter().enumerate() {
             let valid = match argument {
                 ArgumentType::Number => {
-                    self.match_token(self.current_offset, |e| matches!(e, ASMToken::Number(_)))
+                    self.match_token(self.current_offset, |e| matches!(e, ASMToken::Interger(_)))
                 }
                 ArgumentType::Register => {
                     self.match_token(self.current_offset, |e| e.is_register_and_general())
@@ -154,10 +154,10 @@ impl<'a> ArgumentParser<'a> {
                 }
                 ArgumentType::Number => {
                     let number = match self.compiler.peek(self.current_offset).unwrap() {
-                        ASMToken::Number(number) => number,
+                        ASMToken::Interger(number) => number,
                         _ => unreachable!(),
                     };
-                    arguments.push(ParsedArgument::Number(*number));
+                    arguments.push(ParsedArgument::Interger(*number));
                 }
                 ArgumentType::Section => {
                     let ident = match self.compiler.peek(self.current_offset).unwrap() {

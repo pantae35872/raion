@@ -94,7 +94,7 @@ impl ASMCompiler {
 
     pub fn parse_section(
         &mut self,
-        function_hash: u64,
+        procedure_hash: u64,
     ) -> Result<(u64, u64), CompilerError<ASMToken>> {
         let start = self.write_pos;
         self.base.expect_token(ASMToken::LCurly)?;
@@ -177,7 +177,7 @@ impl ASMCompiler {
                             let mut args = self
                                 .try_parse_argument(&[ArgumentType::Label])
                                 .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
-                            args.insert(0, function_hash.to_le_bytes().to_vec());
+                            args.insert(0, procedure_hash.to_le_bytes().to_vec());
                             args
                         }
                         InstructionType::Call => self
@@ -194,7 +194,7 @@ impl ASMCompiler {
                                     ArgumentType::Label,
                                 ])
                                 .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
-                            args.insert(2, function_hash.to_le_bytes().to_vec());
+                            args.insert(2, procedure_hash.to_le_bytes().to_vec());
                             args
                         }
                         InstructionType::Ret | InstructionType::Halt => ParsedArguments::default(),
@@ -228,11 +228,11 @@ impl ASMCompiler {
         }
         self.replace_labels(label_replacess, labels)?;
         self.base.expect_token(ASMToken::RCurly)?;
-        return Ok((start as u64, self.write_pos as u64 - 1));
+        return Ok((start as u64, self.write_pos as u64));
     }
 
     pub fn parse_name(&mut self) -> Result<String, CompilerError<ASMToken>> {
-        let function_name = match self.base.peek(0).ok_or(CompilerError::UnexpectedToken(
+        let name = match self.base.peek(0).ok_or(CompilerError::UnexpectedToken(
             None,
             self.base.current_line(),
         ))? {
@@ -246,22 +246,22 @@ impl ASMCompiler {
         }
         .clone();
         self.base.consume();
-        return Ok(function_name);
+        return Ok(name);
     }
 
     pub fn compile(mut self) -> Result<(Vec<SinSection>, Vec<u8>), CompilerError<ASMToken>> {
         while let Some(token) = self.base.peek(0).cloned() {
             match token {
                 ASMToken::Identifier(ref ident) => match ident.as_str() {
-                    "fn" => {
+                    "proc" => {
                         self.base.consume();
-                        let function_name = self.parse_name()?;
-                        let function_hash = xxh3_64(function_name.as_bytes());
+                        let procedure_name = self.parse_name()?;
+                        let procedure_hash = xxh3_64(procedure_name.as_bytes());
                         self.base.expect_token(ASMToken::Arrow)?;
-                        let (start, end) = self.parse_section(function_hash)?;
+                        let (start, end) = self.parse_section(procedure_hash)?;
                         self.sections.push(SinSection::new(
-                            SectionType::Function,
-                            function_hash,
+                            SectionType::Procedure,
+                            procedure_hash,
                             start,
                             end,
                         ));

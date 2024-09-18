@@ -1,10 +1,10 @@
-fn start -> {
-  mov a64, hello_world
+proc start -> {
+  mov a64, hello_world 
   call print
   halt
 }
 
-fn print -> {
+proc print -> {
   push b64
   push c64
   mov c64, 0

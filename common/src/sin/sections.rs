@@ -4,7 +4,7 @@ use super::SinError;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SectionType {
-    Function,
+    Procedure,
     Constant,
 }
 
@@ -18,7 +18,7 @@ pub struct SinSection {
 impl SectionType {
     pub fn from_byte(data: u8) -> Result<Self, SinError> {
         match data {
-            1 => return Ok(Self::Function),
+            1 => return Ok(Self::Procedure),
             2 => return Ok(Self::Constant),
             ty => return Err(SinError::InvalidSectionType(ty)),
         }
@@ -26,7 +26,7 @@ impl SectionType {
 
     pub fn to_byte(&self) -> u8 {
         match self {
-            Self::Function => return 1,
+            Self::Procedure => return 1,
             Self::Constant => return 2,
         }
     }

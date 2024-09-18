@@ -224,7 +224,7 @@ pub enum ASMToken {
     Instruction(InstructionType),
     Label(String),
     Register(RegisterType),
-    Number(u64),
+    Interger(u64),
     Identifier(String),
     String(String),
     Comma,
@@ -260,7 +260,7 @@ impl Display for ASMToken {
             Self::Register(register) => {
                 write!(f, "Register token with value: {}", register)
             }
-            Self::Number(number) => {
+            Self::Interger(number) => {
                 write!(f, "Number token with value: {}", number)
             }
             Self::Identifier(label) => write!(f, "ToLabel token with value: {}", label),
@@ -282,5 +282,13 @@ impl Token for ASMToken {
             Self::NewLine => return true,
             _ => return false,
         }
+    }
+
+    fn from_string(string: String) -> Self {
+        Self::String(string)
+    }
+
+    fn from_u64(num: u64) -> Self {
+        Self::Interger(num)
     }
 }

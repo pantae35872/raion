@@ -6,14 +6,14 @@ use std::{
 };
 
 use common::sin::Sin;
-use raion::{compiler::asm_compiler::ASMCompiler, lexer::Lexer};
+use raion::{compiler::asm_compiler::ASMCompiler, lexer::asm_lexer::ASMLexer};
 
 fn main() -> ExitCode {
     let mut file = File::open("in.asm").expect("file not found");
     let mut abc = String::new();
     file.read_to_string(&mut abc).unwrap();
-    let lexer = Lexer::new(&abc);
-    let tokens = lexer.tokenize_asm().expect("Cannot parse");
+    let lexer = ASMLexer::new(&abc);
+    let tokens = lexer.tokenize().expect("Cannot parse");
     let compiler = ASMCompiler::new(tokens);
     match compiler.compile() {
         Ok((sections, data)) => {
