@@ -1,5 +1,5 @@
 proc start -> {
-  mov a64, hello_world 
+  mov a64, hello_world
   call print
   halt
 }

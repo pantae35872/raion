@@ -263,7 +263,7 @@ impl Display for ASMToken {
             Self::Interger(number) => {
                 write!(f, "Number token with value: {}", number)
             }
-            Self::Identifier(label) => write!(f, "ToLabel token with value: {}", label),
+            Self::Identifier(label) => write!(f, "Identifier token with value: {}", label),
             Self::String(string) => write!(f, "String token with value: {}", string),
             Self::LBracket => write!(f, "Left Bracket token"),
             Self::RBracket => write!(f, "Right Bracket token"),

@@ -3,6 +3,7 @@ use std::{error::Error, fmt::Display, num::ParseIntError};
 use crate::token::Token;
 
 pub mod asm_lexer;
+pub mod rin_lexer;
 
 #[derive(Debug)]
 pub enum LexerError {
