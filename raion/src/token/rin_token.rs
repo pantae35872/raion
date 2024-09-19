@@ -3,7 +3,7 @@ use std::{fmt::Display, str::FromStr};
 use super::Token;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Type {
+pub enum PrimitiveType {
     U64,
     U32,
     U16,
@@ -35,12 +35,13 @@ pub enum Operator {
 pub enum RinToken {
     Identifier(String),
     String(String),
-    Type(Type),
+    Type(PrimitiveType),
     Keyword(Keyword),
     Operator(Operator),
     Interger(u64),
     Dot,
     Comma,
+    Equals,
     Semicolon,
     LCurly,
     RCurly,
@@ -80,6 +81,7 @@ impl Display for RinToken {
             Self::RCurly => write!(f, "Right Curly token"),
             Self::Semicolon => write!(f, "Semicolon token"),
             Self::Dot => write!(f, "Dot token"),
+            Self::Equals => write!(f, "Equals token"),
             Self::Comma => write!(f, "Comma token"),
             Self::Colon => write!(f, "Colon token"),
             Self::Arrow => write!(f, "Arrow token"),
@@ -110,7 +112,7 @@ impl Display for Keyword {
     }
 }
 
-impl Display for Type {
+impl Display for PrimitiveType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Bool => write!(f, "boolean"),
@@ -128,7 +130,7 @@ impl Display for Type {
 
 pub struct InvalidType;
 
-impl FromStr for Type {
+impl FromStr for PrimitiveType {
     type Err = InvalidType;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

@@ -1,4 +1,5 @@
 use std::{
+    error::Error,
     fs::{self, File},
     io::{Read, Write},
     path::Path,
@@ -7,7 +8,7 @@ use std::{
 
 use common::sin::Sin;
 use raion::{
-    compiler::asm_compiler::ASMCompiler,
+    compiler::{asm_compiler::ASMCompiler, rin_compiler::RinCompiler},
     lexer::{asm_lexer::ASMLexer, rin_lexer::RinLexer},
 };
 
@@ -17,8 +18,16 @@ fn main() -> ExitCode {
     file.read_to_string(&mut data).unwrap();
     let lexer = RinLexer::new(&data);
     let tokens = lexer.tokenize().expect("Failed to tokenize rin");
-    println!("{tokens:?}");
-
+    let mut compiler = RinCompiler::new(tokens);
+    match compiler.parse() {
+        Ok(_) => {}
+        Err(err) => {
+            eprintln!("Compilation error");
+            eprintln!("{}", err);
+        }
+    };
+    let ast = compiler.program();
+    println!("{ast:?}");
     let mut file = File::open("in.asm").expect("file not found");
     let mut abc = String::new();
     file.read_to_string(&mut abc).unwrap();

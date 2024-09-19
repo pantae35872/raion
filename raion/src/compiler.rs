@@ -3,6 +3,7 @@ use std::{error::Error, fmt::Display};
 use crate::token::Token;
 
 pub mod asm_compiler;
+pub mod rin_compiler;
 
 #[derive(Debug)]
 pub enum CompilerError<T: Token> {

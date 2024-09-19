@@ -3,10 +3,18 @@ import std;
 module abc;
 
 proc main():u64 -> {
+  u64 aaa = 10;
+  u64 bbb = 20;
+  u64 result = add(aaa, bbb);
   std.print("Hello World!");
   return 0;
 }
 
 proc add(u64 num1, u64 num2):u64 -> {
-  return num1 + num2;
+  return num1 + num2 + another_fn();
 }
+
+proc another_fn():u64 -> {
+  return 69;
+}
+

@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::token::rin_token::{Keyword, Operator, RinToken, Type};
+use crate::token::rin_token::{Keyword, Operator, PrimitiveType, RinToken};
 
 use super::{LexerBase, LexerError};
 
@@ -49,7 +49,7 @@ impl<'a> RinLexer<'a> {
                     continue;
                 }
 
-                if let Ok(primitive_type) = Type::from_str(&buffer) {
+                if let Ok(primitive_type) = PrimitiveType::from_str(&buffer) {
                     tokens.push(RinToken::Type(primitive_type));
                     buffer.clear();
                     continue;
@@ -93,6 +93,11 @@ impl<'a> RinLexer<'a> {
                 tokens.push(RinToken::Operator(
                     Operator::from_str(&value.to_string()).unwrap(),
                 ));
+                continue;
+            }
+            if value == '=' {
+                self.base.consume();
+                tokens.push(RinToken::Equals);
                 continue;
             }
             if value == '{' {
