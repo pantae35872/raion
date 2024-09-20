@@ -1,6 +1,5 @@
+use common::register::RegisterSizes;
 use proc::instruction;
-
-use crate::executor::registers::RegisterSizes;
 
 use super::InstructionArgument;
 
@@ -23,7 +22,6 @@ pub fn push(args: &mut InstructionArgument) -> Result<(), super::InstructionErro
         RegisterSizes::SizeU64 => {
             args.memory.mem_sets(sp, &(value as u64).to_le_bytes())?;
         }
-        RegisterSizes::SizeBool => unreachable!(),
     }
     return Ok(());
 }

@@ -66,6 +66,15 @@ impl Token for RinToken {
     }
 }
 
+impl Operator {
+    pub fn prec(&self) -> usize {
+        return match self {
+            Self::Add | Self::Subtract => 1,
+            Self::Divide | Self::Multiply => 2,
+        };
+    }
+}
+
 impl Display for RinToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

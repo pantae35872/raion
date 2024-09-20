@@ -1,24 +1,22 @@
-mod instruction_helper;
-
-use common::constants::CMP_OPCODE;
-use craion::executor::{registers::Registers, Executor};
-use instruction_helper::InstructionHelper;
+use common::{constants::CMP_OPCODE, register::RegisterType};
+use craion::{executor::Executor, instruction_helper::InstructionHelper};
 
 #[test]
 fn carry_cmp() {
     let mut executor = Executor::new(0xFFFF);
     InstructionHelper::new(&mut executor.memory())
-        .encode(CMP_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+        .encode(CMP_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 1)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 1)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 2)
+        .set_general(&RegisterType::B64, 2)
         .unwrap();
     executor.execute();
     assert_eq!(executor.registers().get_zero(), false);
@@ -30,17 +28,18 @@ fn carry_cmp() {
 fn zero_cmp() {
     let mut executor = Executor::new(0xFFFF);
     InstructionHelper::new(&mut executor.memory())
-        .encode(CMP_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+        .encode(CMP_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 1)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 1)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 1)
+        .set_general(&RegisterType::B64, 1)
         .unwrap();
     executor.execute();
     assert_eq!(executor.registers().get_zero(), true);
@@ -52,17 +51,18 @@ fn zero_cmp() {
 fn negative_cmp() {
     let mut executor = Executor::new(0xFFFF);
     InstructionHelper::new(&mut executor.memory())
-        .encode(CMP_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+        .encode(CMP_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 18446744073709551615)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 18446744073709551615)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 1)
+        .set_general(&RegisterType::B64, 1)
         .unwrap();
     executor.execute();
     assert_eq!(executor.registers().get_zero(), false);

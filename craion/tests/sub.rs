@@ -1,28 +1,29 @@
-mod instruction_helper;
-
-use common::constants::SUB_OPCODE;
-use craion::executor::{registers::Registers, Executor};
-use instruction_helper::InstructionHelper;
+use common::{constants::SUB_OPCODE, register::RegisterType};
+use craion::{executor::Executor, instruction_helper::InstructionHelper};
 
 #[test]
 fn normal_sub() {
     let mut executor = Executor::new(0xFFFF);
-    InstructionHelper::new(&mut executor.memory())
-        .encode(SUB_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+    InstructionHelper::new(executor.memory())
+        .encode(SUB_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 8)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 8)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 5)
+        .set_general(&RegisterType::B64, 5)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor.registers().get_general(&Registers::A64).unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
         3
     );
     assert_eq!(executor.registers().get_zero(), false);
@@ -33,22 +34,26 @@ fn normal_sub() {
 #[test]
 fn zero_sub() {
     let mut executor = Executor::new(0xFFFF);
-    InstructionHelper::new(&mut executor.memory())
-        .encode(SUB_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+    InstructionHelper::new(executor.memory())
+        .encode(SUB_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 3)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 3)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 3)
+        .set_general(&RegisterType::B64, 3)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor.registers().get_general(&Registers::A64).unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
         0
     );
     assert_eq!(executor.registers().get_zero(), true);
@@ -58,22 +63,26 @@ fn zero_sub() {
 #[test]
 fn negative_sub() {
     let mut executor = Executor::new(0xFFFF);
-    InstructionHelper::new(&mut executor.memory())
-        .encode(SUB_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+    InstructionHelper::new(executor.memory())
+        .encode(SUB_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 18446744073709551615)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 18446744073709551615)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 1)
+        .set_general(&RegisterType::B64, 1)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor.registers().get_general(&Registers::A64).unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
         18446744073709551614 // -2
     );
     assert_eq!(executor.registers().get_zero(), false);
@@ -83,22 +92,26 @@ fn negative_sub() {
 #[test]
 fn carry_sub() {
     let mut executor = Executor::new(0xFFFF);
-    InstructionHelper::new(&mut executor.memory())
-        .encode(SUB_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+    InstructionHelper::new(executor.memory())
+        .encode(SUB_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 2)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 2)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 3)
+        .set_general(&RegisterType::B64, 3)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor.registers().get_general(&Registers::A64).unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
         18446744073709551615 // -1
     );
     assert_eq!(executor.registers().get_zero(), false);

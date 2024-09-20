@@ -1,6 +1,5 @@
+use common::register::RegisterSizes;
 use proc::instruction;
-
-use crate::executor::registers::RegisterSizes;
 
 use super::InstructionArgument;
 
@@ -34,7 +33,6 @@ pub fn pop(args: &mut InstructionArgument) -> Result<(), super::InstructionError
                 u64::from_le_bytes(<[u8; 8]>::try_from(args.memory.mem_gets(sp, 8)?).unwrap()),
             )?;
         }
-        RegisterSizes::SizeBool => unreachable!(),
     }
     args.register.inc_sp(reg.size().byte());
     return Ok(());

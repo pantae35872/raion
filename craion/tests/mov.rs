@@ -1,135 +1,229 @@
-mod instruction_helper;
-
-use common::constants::{MOV_OPCODE, MOV_REG2MEM, MOV_REG2REG};
-use craion::{
-    executor::{registers::Registers, Executor},
-    memory::address::Address,
+use common::{
+    constants::{MOV_NUM2REG, MOV_OPCODE, MOV_REG2DEREF_REG, MOV_REG2REG},
+    register::RegisterType,
 };
-use instruction_helper::InstructionHelper;
+use craion::{executor::Executor, instruction_helper::InstructionHelper, memory::address::Address};
 
 #[test]
 fn reg2reg() {
     let mut executor = Executor::new(0xFFFF);
     InstructionHelper::new(&mut executor.memory())
-        .encode(MOV_OPCODE, &[MOV_REG2REG, 4, 8])
-        .unwrap()
-        .halt()
+        .encode(MOV_OPCODE)
+        .encode_sub_opcode(MOV_REG2REG)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 32)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 32)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 64)
+        .set_general(&RegisterType::B64, 64)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor.registers().get_general(&Registers::A64).unwrap(),
-        executor.registers().get_general(&Registers::B64).unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::B64)
+            .unwrap(),
+    );
+}
+
+#[test]
+fn num2reg_u8() {
+    let mut executor = Executor::new(0xFFFF);
+    InstructionHelper::new(&mut executor.memory())
+        .encode(MOV_OPCODE)
+        .encode_sub_opcode(MOV_NUM2REG)
+        .encode_register(RegisterType::A8)
+        .encode_u8(211)
+        .end()
+        .halt();
+    executor.execute();
+    assert_eq!(
+        executor.registers().get_general(&RegisterType::A8).unwrap(),
+        211
+    );
+}
+
+#[test]
+fn num2reg_u16() {
+    let mut executor = Executor::new(0xFFFF);
+    InstructionHelper::new(&mut executor.memory())
+        .encode(MOV_OPCODE)
+        .encode_sub_opcode(MOV_NUM2REG)
+        .encode_register(RegisterType::A16)
+        .encode_u16(2211)
+        .end()
+        .halt();
+    executor.execute();
+    assert_eq!(
+        executor
+            .registers()
+            .get_general(&RegisterType::A16)
+            .unwrap(),
+        2211
+    );
+}
+
+#[test]
+fn num2reg_u32() {
+    let mut executor = Executor::new(0xFFFF);
+    InstructionHelper::new(&mut executor.memory())
+        .encode(MOV_OPCODE)
+        .encode_sub_opcode(MOV_NUM2REG)
+        .encode_register(RegisterType::A32)
+        .encode_u32(2211520)
+        .end()
+        .halt();
+    executor.execute();
+    assert_eq!(
+        executor
+            .registers()
+            .get_general(&RegisterType::A32)
+            .unwrap(),
+        2211520
+    );
+}
+
+#[test]
+fn num2reg_u64() {
+    let mut executor = Executor::new(0xFFFF);
+    InstructionHelper::new(&mut executor.memory())
+        .encode(MOV_OPCODE)
+        .encode_sub_opcode(MOV_NUM2REG)
+        .encode_register(RegisterType::A64)
+        .encode_u64(22115221320)
+        .end()
+        .halt();
+    executor.execute();
+    assert_eq!(
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
+        22115221320
     );
 }
 
 #[test]
 fn reg2mem_u8() {
     let mut executor = Executor::new(0xFFFF);
-    let mut arg = [MOV_REG2MEM].to_vec();
-    arg.extend_from_slice(&Address::new(63).get_raw().to_le_bytes());
-    arg.push(1);
     InstructionHelper::new(&mut executor.memory())
-        .encode(MOV_OPCODE, &arg)
-        .unwrap()
-        .halt()
+        .encode(MOV_OPCODE)
+        .encode_sub_opcode(MOV_REG2DEREF_REG)
+        .encode_register(RegisterType::A8)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A8, 120)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A8, 32)
+        .set_general(&RegisterType::B64, 0xFF)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor
+        &executor
             .registers()
-            .get_general(&Registers::A8)
+            .get_general(&RegisterType::A8)
             .unwrap()
-            .to_le_bytes()[0],
-        executor.memory().mem_get(Address::new(63)).unwrap()
+            .to_le_bytes()[0..1],
+        executor.memory().mem_gets(Address::new(0xFF), 1).unwrap()
     );
 }
 
 #[test]
 fn reg2mem_u16() {
     let mut executor = Executor::new(0xFFFF);
-    let mut arg = [MOV_REG2MEM].to_vec();
-    arg.extend_from_slice(&Address::new(61).get_raw().to_le_bytes());
-    arg.push(2);
     InstructionHelper::new(&mut executor.memory())
-        .encode(MOV_OPCODE, &arg)
-        .unwrap()
-        .halt()
+        .encode(MOV_OPCODE)
+        .encode_sub_opcode(MOV_REG2DEREF_REG)
+        .encode_register(RegisterType::A16)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A16, 65512)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A16, 32)
+        .set_general(&RegisterType::B64, 0xFF)
         .unwrap();
     executor.execute();
     assert_eq!(
         &executor
             .registers()
-            .get_general(&Registers::A16)
+            .get_general(&RegisterType::A16)
             .unwrap()
             .to_le_bytes()[0..2],
-        executor.memory().mem_gets(Address::new(61), 2).unwrap()
+        executor.memory().mem_gets(Address::new(0xFF), 2).unwrap()
     );
 }
 
 #[test]
 fn reg2mem_u32() {
     let mut executor = Executor::new(0xFFFF);
-    let mut arg = [MOV_REG2MEM].to_vec();
-    arg.extend_from_slice(&Address::new(59).get_raw().to_le_bytes());
-    arg.push(3);
     InstructionHelper::new(&mut executor.memory())
-        .encode(MOV_OPCODE, &arg)
-        .unwrap()
-        .halt()
+        .encode(MOV_OPCODE)
+        .encode_sub_opcode(MOV_REG2DEREF_REG)
+        .encode_register(RegisterType::A32)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A32, 45555)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A32, 32)
+        .set_general(&RegisterType::B64, 0xFF)
         .unwrap();
     executor.execute();
     assert_eq!(
         &executor
             .registers()
-            .get_general(&Registers::A32)
+            .get_general(&RegisterType::A32)
             .unwrap()
             .to_le_bytes()[0..4],
-        executor.memory().mem_gets(Address::new(59), 4).unwrap()
+        executor.memory().mem_gets(Address::new(0xFF), 4).unwrap()
     );
 }
 
 #[test]
-fn reg2mem_u64() {
+fn reg2deref_reg_u64() {
     let mut executor = Executor::new(0xFFFF);
-    let mut arg = [MOV_REG2MEM].to_vec();
-    arg.extend_from_slice(&Address::new(55).get_raw().to_le_bytes());
-    arg.push(4);
     InstructionHelper::new(&mut executor.memory())
-        .encode(MOV_OPCODE, &arg)
-        .unwrap()
-        .halt()
+        .encode(MOV_OPCODE)
+        .encode_sub_opcode(MOV_REG2DEREF_REG)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 15)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 32)
+        .set_general(&RegisterType::B64, 0xFF)
         .unwrap();
     executor.execute();
     assert_eq!(
         executor
             .registers()
-            .get_general(&Registers::A64)
+            .get_general(&RegisterType::A64)
             .unwrap()
             .to_le_bytes(),
-        executor.memory().mem_gets(Address::new(55), 8).unwrap()
+        executor.memory().mem_gets(Address::new(0xFF), 8).unwrap()
     );
 }

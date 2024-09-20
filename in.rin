@@ -11,7 +11,7 @@ proc main():u64 -> {
 }
 
 proc add(u64 num1, u64 num2):u64 -> {
-  return num1 + num2 + another_fn();
+  return num1 + num2 * 5 + another_fn() / 5;
 }
 
 proc another_fn():u64 -> {

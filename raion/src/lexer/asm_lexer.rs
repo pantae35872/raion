@@ -1,6 +1,11 @@
 use std::str::FromStr;
 
-use crate::token::asm_token::{ASMToken, InstructionType, RegisterType};
+use common::register::RegisterType;
+
+use crate::token::{
+    self,
+    asm_token::{ASMToken, InstructionType},
+};
 
 use super::{LexerBase, LexerError};
 
@@ -74,6 +79,11 @@ impl<'a> ASMLexer<'a> {
                 }
                 continue;
             }
+            if value == '+' {
+                self.base.consume();
+                tokens.push(ASMToken::Plus);
+                continue;
+            }
             if value == '[' {
                 self.base.consume();
                 tokens.push(ASMToken::LBracket);
@@ -97,6 +107,11 @@ impl<'a> ASMLexer<'a> {
             if self.base.peek_match("->") {
                 self.base.consumes(2);
                 tokens.push(ASMToken::Arrow);
+                continue;
+            }
+            if value == '-' {
+                self.base.consume();
+                tokens.push(ASMToken::Minus);
                 continue;
             }
             if value == '\"' {

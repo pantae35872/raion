@@ -1,28 +1,29 @@
-mod instruction_helper;
-
-use common::constants::ADD_OPCODE;
-use craion::executor::{registers::Registers, Executor};
-use instruction_helper::InstructionHelper;
+use common::{constants::ADD_OPCODE, register::RegisterType};
+use craion::{executor::Executor, instruction_helper::InstructionHelper};
 
 #[test]
 fn normal_add() {
     let mut executor = Executor::new(0xFFFF);
     InstructionHelper::new(&mut executor.memory())
-        .encode(ADD_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+        .encode(ADD_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 5)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 5)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 3)
+        .set_general(&RegisterType::B64, 3)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor.registers().get_general(&Registers::A64).unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
         8
     );
     assert_eq!(executor.registers().get_zero(), false);
@@ -33,21 +34,25 @@ fn normal_add() {
 fn carry_add() {
     let mut executor = Executor::new(0xFFFF);
     InstructionHelper::new(&mut executor.memory())
-        .encode(ADD_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+        .encode(ADD_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 5)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 5)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 0xFFFFFFFFFFFFFFFF)
+        .set_general(&RegisterType::B64, 0xFFFFFFFFFFFFFFFF)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor.registers().get_general(&Registers::A64).unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
         4
     );
     assert_eq!(executor.registers().get_zero(), false);
@@ -59,21 +64,25 @@ fn carry_add() {
 fn zero_add() {
     let mut executor = Executor::new(0xFFFF);
     InstructionHelper::new(&mut executor.memory())
-        .encode(ADD_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+        .encode(ADD_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 0)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 0)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 0)
+        .set_general(&RegisterType::B64, 0)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor.registers().get_general(&Registers::A64).unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
         0
     );
     assert_eq!(executor.registers().get_zero(), true);
@@ -84,21 +93,25 @@ fn zero_add() {
 fn negative_add() {
     let mut executor = Executor::new(0xFFFF);
     InstructionHelper::new(&mut executor.memory())
-        .encode(ADD_OPCODE, &[4, 8])
-        .unwrap()
-        .halt()
+        .encode(ADD_OPCODE)
+        .encode_register(RegisterType::A64)
+        .encode_register(RegisterType::B64)
+        .end()
+        .halt();
+    executor
+        .registers()
+        .set_general(&RegisterType::A64, 1)
         .unwrap();
     executor
         .registers()
-        .set_general(&Registers::A64, 1)
-        .unwrap();
-    executor
-        .registers()
-        .set_general(&Registers::B64, 0x7FFFFFFFFFFFFFFF)
+        .set_general(&RegisterType::B64, 0x7FFFFFFFFFFFFFFF)
         .unwrap();
     executor.execute();
     assert_eq!(
-        executor.registers().get_general(&Registers::A64).unwrap(),
+        executor
+            .registers()
+            .get_general(&RegisterType::A64)
+            .unwrap(),
         9223372036854775808 // -1
     );
     assert_eq!(executor.registers().get_zero(), false);

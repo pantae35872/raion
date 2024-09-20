@@ -60,9 +60,14 @@ enum Statement {
 
 #[derive(Debug)]
 enum Expression {
-    Literial(Literal),
+    Term(Term),
     BinaryOp(Box<Expression>, BinaryOperator, Box<Expression>),
-    FunctionCall(Path, Vec<Expression>),
+}
+
+#[derive(Debug)]
+enum Term {
+    Literial(Literal),
+    ProcedureCall(Path, Vec<Expression>),
     LocalVariableAccess(String),
 }
 
@@ -197,7 +202,7 @@ impl RinCompiler {
                 let var_type = self.parse_type()?;
                 let name = self.parse_identifier()?;
                 self.base.expect_token(RinToken::Equals)?;
-                let value = self.parse_expression()?;
+                let value = self.parse_expression(0)?;
                 Ok(Statement::VariableDecl {
                     name,
                     var_type,
@@ -207,7 +212,7 @@ impl RinCompiler {
             RinToken::Keyword(keyword) => match keyword {
                 Keyword::Return => {
                     self.base.consume();
-                    let expr = self.parse_expression()?;
+                    let expr = self.parse_expression(0)?;
                     Ok(Statement::Return(expr))
                 }
                 unexpected => Err(CompilerError::UnexpectedToken(
@@ -215,30 +220,30 @@ impl RinCompiler {
                     self.base.current_line(),
                 )),
             },
-            _ => Ok(Statement::Expression(self.parse_expression()?)),
+            _ => Ok(Statement::Expression(self.parse_expression(0)?)),
         };
 
         self.base.expect_token(RinToken::Semicolon)?;
         return value;
     }
 
-    fn parse_expression(&mut self) -> Result<Expression, CompilerError<RinToken>> {
-        let term = self.parse_term()?;
-        if let Some(operator) = self.base.peek(0).cloned() {
-            match operator {
+    fn parse_expression(&mut self, min_prec: usize) -> Result<Expression, CompilerError<RinToken>> {
+        let mut lhs = Expression::Term(self.parse_term()?);
+        while let Some(token) = self.base.peek(0).cloned() {
+            match token {
                 RinToken::Operator(operator) => {
+                    if operator.prec() < min_prec {
+                        break;
+                    }
                     self.base.consume();
-                    let right_side = self.parse_expression()?;
-                    return Ok(Expression::BinaryOp(
-                        term.into(),
-                        operator.into(),
-                        right_side.into(),
-                    ));
+                    let rhs = self.parse_expression(operator.prec())?;
+
+                    lhs = Expression::BinaryOp(lhs.into(), operator.into(), rhs.into());
                 }
-                _ => {}
+                _ => break,
             }
         }
-        return Ok(term);
+        return Ok(lhs);
     }
 
     fn parse_parameters(&mut self) -> Result<Vec<Parameter>, CompilerError<RinToken>> {
@@ -276,7 +281,7 @@ impl RinCompiler {
         return Ok(params);
     }
 
-    fn parse_term(&mut self) -> Result<Expression, CompilerError<RinToken>> {
+    fn parse_term(&mut self) -> Result<Term, CompilerError<RinToken>> {
         return match self
             .base
             .peek(0)
@@ -288,11 +293,11 @@ impl RinCompiler {
         {
             RinToken::Interger(interger) => {
                 self.base.consume();
-                Ok(Expression::Literial(Literal::Interger(interger)))
+                Ok(Term::Literial(Literal::Interger(interger)))
             }
             RinToken::String(string) => {
                 self.base.consume();
-                Ok(Expression::Literial(Literal::String(string)))
+                Ok(Term::Literial(Literal::String(string)))
             }
             RinToken::Identifier(ident) => {
                 if self.base.peek(1).is_some_and(|e| {
@@ -302,7 +307,7 @@ impl RinCompiler {
                 }
                 self.base.consume();
 
-                Ok(Expression::LocalVariableAccess(ident))
+                Ok(Term::LocalVariableAccess(ident))
             }
             unexpected => Err(CompilerError::UnexpectedToken(
                 Some(unexpected),
@@ -311,7 +316,7 @@ impl RinCompiler {
         };
     }
 
-    fn parse_fn_call(&mut self) -> Result<Expression, CompilerError<RinToken>> {
+    fn parse_fn_call(&mut self) -> Result<Term, CompilerError<RinToken>> {
         let path = self.parse_path()?;
         self.base.expect_token(RinToken::LRoundBracket)?;
         let mut params = Vec::new();
@@ -321,11 +326,11 @@ impl RinCompiler {
             .is_some_and(|e| matches!(e, RinToken::RRoundBracket))
         {
             self.base.consume();
-            return Ok(Expression::FunctionCall(path, params));
+            return Ok(Term::ProcedureCall(path, params));
         }
 
         while self.base.peek(0).is_some() {
-            let param = self.parse_expression()?;
+            let param = self.parse_expression(0)?;
             params.push(param);
             if matches!(
                 self.base.peek(0).ok_or(CompilerError::UnexpectedToken(
@@ -340,7 +345,7 @@ impl RinCompiler {
             self.base.expect_token(RinToken::Comma)?;
         }
 
-        return Ok(Expression::FunctionCall(path, params));
+        return Ok(Term::ProcedureCall(path, params));
     }
 
     fn parse_imports(&mut self) -> Result<Import, CompilerError<RinToken>> {

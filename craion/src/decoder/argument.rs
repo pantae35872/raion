@@ -3,12 +3,12 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use common::memory::buffer_reader::BufferReader;
-
-use crate::{
-    executor::registers::{RegisterParseError, Registers},
-    memory::address::Address,
+use common::{
+    memory::buffer_reader::BufferReader,
+    register::{RegisterParseError, RegisterType},
 };
+
+use crate::memory::address::Address;
 
 #[derive(Debug)]
 pub enum ArgumentParseError {
@@ -47,12 +47,12 @@ impl<'a> Argument<'a> {
         }
     }
 
-    pub fn parse_register(&mut self) -> Result<Registers, ArgumentParseError> {
+    pub fn parse_register(&mut self) -> Result<RegisterType, ArgumentParseError> {
         let byte_read = match self.reader.read_bytes(1) {
             Some(byte) => byte,
             None => return Err(ArgumentParseError::OutOfRange(self.reader.get_read_pos())),
         };
-        return Ok(Registers::from_byte(byte_read[0])?);
+        return Ok(RegisterType::from_byte(byte_read[0])?);
     }
 
     pub fn parse_u64(&mut self) -> Result<u64, ArgumentParseError> {

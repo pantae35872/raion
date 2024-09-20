@@ -1,5 +1,4 @@
 use std::{
-    error::Error,
     fs::{self, File},
     io::{Read, Write},
     path::Path,
