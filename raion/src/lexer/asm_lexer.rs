@@ -2,10 +2,7 @@ use std::str::FromStr;
 
 use common::register::RegisterType;
 
-use crate::token::{
-    self,
-    asm_token::{ASMToken, InstructionType},
-};
+use crate::token::asm_token::{ASMToken, InstructionType};
 
 use super::{LexerBase, LexerError};
 

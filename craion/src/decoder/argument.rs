@@ -78,18 +78,22 @@ impl<'a> Argument<'a> {
         return Ok(number_read);
     }
     pub fn parse_u8(&mut self) -> Result<u8, ArgumentParseError> {
-        let number_read = match self.reader.read_u8() {
-            Some(number) => number,
-            None => return Err(ArgumentParseError::OutOfRange(self.reader.get_read_pos())),
-        };
+        let number_read = self
+            .reader
+            .read_u8()
+            .ok_or(ArgumentParseError::OutOfRange(self.reader.get_read_pos()))?;
         return Ok(number_read);
     }
 
+    pub fn parse_boolean(&mut self) -> Result<bool, ArgumentParseError> {
+        return Ok(self.parse_u8()? == 1);
+    }
+
     pub fn parse_address(&mut self) -> Result<Address, ArgumentParseError> {
-        let number_read = match self.reader.read_u64() {
-            Some(number) => number,
-            None => return Err(ArgumentParseError::OutOfRange(self.reader.get_read_pos())),
-        };
+        let number_read = self
+            .reader
+            .read_u64()
+            .ok_or(ArgumentParseError::OutOfRange(self.reader.get_read_pos()))?;
         return Ok(Address::new(number_read as usize));
     }
 }

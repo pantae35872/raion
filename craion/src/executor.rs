@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use common::sin::sections::SinSection;
 
 use crate::{
@@ -11,12 +13,46 @@ use self::registers::RegisterFile;
 
 pub mod registers;
 
+#[derive(Debug)]
+pub struct ExecutorState {
+    stack_saved_size: u64,
+    procedure_arguments: HashMap<u32, u64>,
+}
+
 pub struct Executor {
     memory: Memory,
     register: RegisterFile,
     argument_memory: ArgumentMemory,
     ret_stack: RetStack,
     section_manager: SectionManager,
+    state: ExecutorState,
+}
+
+impl ExecutorState {
+    pub fn new() -> Self {
+        Self {
+            stack_saved_size: 0,
+            procedure_arguments: HashMap::new(),
+        }
+    }
+
+    pub fn save_stack_size(&mut self, size: u64) {
+        self.stack_saved_size = size;
+    }
+
+    pub fn consume_stack_size(&mut self) -> u64 {
+        let prev = self.stack_saved_size;
+        self.stack_saved_size = 0;
+        return prev;
+    }
+
+    pub fn load_argument(&mut self, index: u32, value: u64) {
+        self.procedure_arguments.insert(index, value);
+    }
+
+    pub fn get_argument(&self, index: u32) -> u64 {
+        return *self.procedure_arguments.get(&index).unwrap_or(&0);
+    }
 }
 
 impl Executor {
@@ -27,6 +63,7 @@ impl Executor {
             argument_memory: ArgumentMemory::new(),
             ret_stack: RetStack::new(),
             section_manager: SectionManager::new(),
+            state: ExecutorState::new(),
         }
     }
 
@@ -64,6 +101,7 @@ impl Executor {
                     &mut self.argument_memory,
                     &mut self.ret_stack,
                     &mut self.section_manager,
+                    &mut self.state,
                 ) {
                     Ok(result) => result,
                     Err(e) => {

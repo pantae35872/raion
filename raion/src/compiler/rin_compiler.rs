@@ -236,7 +236,7 @@ impl RinCompiler {
                         break;
                     }
                     self.base.consume();
-                    let rhs = self.parse_expression(operator.prec())?;
+                    let rhs = self.parse_expression(operator.prec() + 1)?;
 
                     lhs = Expression::BinaryOp(lhs.into(), operator.into(), rhs.into());
                 }

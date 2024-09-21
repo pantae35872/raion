@@ -3,7 +3,7 @@ use std::{error::Error, fmt::Display};
 use instruction::Instruction;
 
 use crate::{
-    executor::registers::RegisterFile,
+    executor::{registers::RegisterFile, ExecutorState},
     memory::{address::Address, argument_memory::ArgumentMemory, Memory, MemoryError}, ret_stack::RetStack, section_manager::SectionManager,
 };
 
@@ -34,7 +34,7 @@ impl Error for DecoderError {}
 
 
 pub fn decode<'a>(memory: &'a mut Memory, register: &'a mut RegisterFile, argument_memory: &'a mut ArgumentMemory, ret_stack: &'a mut RetStack, 
-    section_manager: &'a mut SectionManager) -> Result<Instruction<'a>, DecoderError> {
+    section_manager: &'a mut SectionManager, executor_state: &'a mut ExecutorState) -> Result<Instruction<'a>, DecoderError> {
     let instruction_length = match memory.mem_get(register.get_ip()) {
         Ok(il) => il as usize,
         Err(err) => match err {
@@ -56,5 +56,5 @@ pub fn decode<'a>(memory: &'a mut Memory, register: &'a mut RegisterFile, argume
     let opcode = u16::from_le_bytes([instruction[1], instruction[2]]);
     let argument = &instruction[3..instruction_length];
     argument_memory.set_arguement(argument);
-    return Ok(Instruction::decode(opcode, register, memory, Argument::new(argument_memory.get_argument()), ret_stack, section_manager, instruction_length)?);
+    return Ok(Instruction::decode(opcode, register, memory, Argument::new(argument_memory.get_argument()), ret_stack, section_manager, executor_state,instruction_length)?);
 }

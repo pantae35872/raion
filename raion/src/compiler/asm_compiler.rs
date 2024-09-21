@@ -3,20 +3,11 @@ use std::collections::HashMap;
 use argument_parser::{ArgumentParser, ArgumentType, ParsedArguments};
 use common::{
     constants::{
-        ADD_REG_W_NUM, ADD_REG_W_REG, ADD_SP_W_NUM, MOV_ADD2SP, MOV_DEREF_REG2REG,
-        MOV_DEREF_SP_WITH_ADD_OFFSET2DEREF_SP_WITH_ADD_OFFSET_WITH_SIZE,
-        MOV_DEREF_SP_WITH_ADD_OFFSET2DEREF_SP_WITH_SUB_OFFSET_WITH_SIZE,
-        MOV_DEREF_SP_WITH_ADD_OFFSET2REG,
-        MOV_DEREF_SP_WITH_SUB_OFFSET2DEREF_SP_WITH_ADD_OFFSET_WITH_SIZE,
-        MOV_DEREF_SP_WITH_SUB_OFFSET2DEREF_SP_WITH_SUB_OFFSET_WITH_SIZE,
-        MOV_DEREF_SP_WITH_SUB_OFFSET2REG, MOV_NUM2DEREF_REG_WITH_ADD_OFFSET,
-        MOV_NUM2DEREF_REG_WITH_SUB_OFFSET, MOV_NUM2DEREF_SP_WITH_ADD_OFFSET,
-        MOV_NUM2DEREF_SP_WITH_SUB_OFFSET, MOV_NUM2REG, MOV_REG2DEREF_REG_WITH_ADD_OFFSET,
-        MOV_REG2DEREF_REG_WITH_SUB_OFFSET, MOV_REG2DEREF_SP_WITH_ADD_OFFSET,
-        MOV_REG2DEREF_SP_WITH_SUB_OFFSET, MOV_REG2REG, MOV_REG2SP,
-        MOV_SECTION_ADDR2DEREF_REG_WITH_ADD_OFFSET, MOV_SECTION_ADDR2DEREF_REG_WITH_SUB_OFFSET,
-        MOV_SECTION_ADDR2DEREF_SP_WITH_ADD_OFFSET, MOV_SECTION_ADDR2DEREF_SP_WITH_SUB_OFFSET,
-        MOV_SECTION_ADDR_2REG, SUB_REG_W_NUM, SUB_REG_W_REG, SUB_SP_W_NUM,
+        ADD_REG_W_NUM, ADD_REG_W_REG, ADD_SP_W_NUM, ARG_NUM, ARG_REG, MOV_ADD2SP,
+        MOV_DEREF_REG2REG, MOV_DEREF_REG_WITH_OFFSET2REG, MOV_NUM2DEREF_REG_WITH_OFFSET,
+        MOV_NUM2REG, MOV_REG2DEREF_REG_WITH_OFFSET, MOV_REG2REG, MOV_REG2SP,
+        MOV_SECTION_ADDR2DEREF_REG_WITH_OFFSET, MOV_SECTION_ADDR_2REG, SUB_REG_W_NUM,
+        SUB_REG_W_REG, SUB_SP_W_NUM,
     },
     sin::sections::{SectionType, SinSection},
 };
@@ -145,14 +136,14 @@ impl ASMCompiler {
                                     subopcode = MOV_NUM2REG;
                                     self.try_parse_argument(&[
                                         ArgumentType::Register,
-                                        ArgumentType::Number,
+                                        ArgumentType::U64,
                                     ])
                                 })
                                 .or_else(|| {
                                     subopcode = MOV_ADD2SP;
                                     self.try_parse_argument(&[
                                         ArgumentType::RegisterSp,
-                                        ArgumentType::Number,
+                                        ArgumentType::U64,
                                     ])
                                 })
                                 .or_else(|| {
@@ -170,133 +161,31 @@ impl ASMCompiler {
                                     ])
                                 })
                                 .or_else(|| {
-                                    subopcode = MOV_NUM2DEREF_SP_WITH_ADD_OFFSET;
+                                    subopcode = MOV_NUM2DEREF_REG_WITH_OFFSET;
                                     self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetAdd,
-                                        ArgumentType::Number,
+                                        ArgumentType::DerefRegisterOffset,
+                                        ArgumentType::U64,
                                     ])
                                 })
                                 .or_else(|| {
-                                    subopcode = MOV_NUM2DEREF_SP_WITH_SUB_OFFSET;
+                                    subopcode = MOV_REG2DEREF_REG_WITH_OFFSET;
                                     self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetSub,
-                                        ArgumentType::Number,
+                                        ArgumentType::DerefRegisterOffset,
+                                        ArgumentType::Register,
                                     ])
                                 })
                                 .or_else(|| {
-                                    subopcode = MOV_NUM2DEREF_REG_WITH_SUB_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterOffsetSub,
-                                        ArgumentType::Number,
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_NUM2DEREF_REG_WITH_ADD_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterOffsetAdd,
-                                        ArgumentType::Number,
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_DEREF_SP_WITH_ADD_OFFSET2DEREF_SP_WITH_ADD_OFFSET_WITH_SIZE;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetAdd,
-                                        ArgumentType::DerefRegisterSpOffsetAdd,
-                                        ArgumentType::Number
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_DEREF_SP_WITH_ADD_OFFSET2DEREF_SP_WITH_SUB_OFFSET_WITH_SIZE;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetAdd,
-                                        ArgumentType::DerefRegisterSpOffsetSub,
-                                        ArgumentType::Number
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_DEREF_SP_WITH_SUB_OFFSET2DEREF_SP_WITH_ADD_OFFSET_WITH_SIZE;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetSub,
-                                        ArgumentType::DerefRegisterSpOffsetAdd,
-                                        ArgumentType::Number
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_DEREF_SP_WITH_SUB_OFFSET2DEREF_SP_WITH_SUB_OFFSET_WITH_SIZE;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetSub,
-                                        ArgumentType::DerefRegisterSpOffsetSub,
-                                        ArgumentType::Number
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_REG2DEREF_REG_WITH_ADD_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterOffsetAdd,
-                                        ArgumentType::Register
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_REG2DEREF_REG_WITH_SUB_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterOffsetSub,
-                                        ArgumentType::Register
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_REG2DEREF_SP_WITH_ADD_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetAdd,
-                                        ArgumentType::Register
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_REG2DEREF_SP_WITH_SUB_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetSub,
-                                        ArgumentType::Register
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_SECTION_ADDR2DEREF_REG_WITH_ADD_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterOffsetAdd,
-                                        ArgumentType::Section
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_SECTION_ADDR2DEREF_REG_WITH_SUB_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetSub,
-                                        ArgumentType::Section
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_SECTION_ADDR2DEREF_SP_WITH_SUB_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetSub,
-                                        ArgumentType::Section
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_SECTION_ADDR2DEREF_SP_WITH_ADD_OFFSET;
-                                    self.try_parse_argument(&[
-                                        ArgumentType::DerefRegisterSpOffsetAdd,
-                                        ArgumentType::Section
-                                    ])
-                                })
-                                .or_else(|| {
-                                    subopcode = MOV_DEREF_SP_WITH_SUB_OFFSET2REG;
+                                    subopcode = MOV_DEREF_REG_WITH_OFFSET2REG;
                                     self.try_parse_argument(&[
                                         ArgumentType::Register,
-                                        ArgumentType::DerefRegisterSpOffsetSub
+                                        ArgumentType::DerefRegisterOffset,
                                     ])
                                 })
                                 .or_else(|| {
-                                    subopcode = MOV_DEREF_SP_WITH_ADD_OFFSET2REG;
+                                    subopcode = MOV_SECTION_ADDR2DEREF_REG_WITH_OFFSET;
                                     self.try_parse_argument(&[
-                                        ArgumentType::Register,
-                                        ArgumentType::DerefRegisterSpOffsetAdd
+                                        ArgumentType::DerefRegisterOffset,
+                                        ArgumentType::Section,
                                     ])
                                 })
                                 .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
@@ -317,14 +206,14 @@ impl ASMCompiler {
                                     subopcode = ADD_REG_W_NUM;
                                     self.try_parse_argument(&[
                                         ArgumentType::Register,
-                                        ArgumentType::Number,
+                                        ArgumentType::U64,
                                     ])
                                 })
                                 .or_else(|| {
                                     subopcode = ADD_SP_W_NUM;
                                     self.try_parse_argument(&[
                                         ArgumentType::RegisterSp,
-                                        ArgumentType::Number,
+                                        ArgumentType::U64,
                                     ])
                                 })
                                 .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
@@ -342,14 +231,14 @@ impl ASMCompiler {
                                     subopcode = SUB_REG_W_NUM;
                                     self.try_parse_argument(&[
                                         ArgumentType::Register,
-                                        ArgumentType::Number,
+                                        ArgumentType::U64,
                                     ])
                                 })
                                 .or_else(|| {
                                     subopcode = SUB_SP_W_NUM;
                                     self.try_parse_argument(&[
                                         ArgumentType::RegisterSp,
-                                        ArgumentType::Number,
+                                        ArgumentType::U64,
                                     ])
                                 })
                                 .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
@@ -359,7 +248,9 @@ impl ASMCompiler {
                         InstructionType::Inc
                         | InstructionType::Pop
                         | InstructionType::Push
-                        | InstructionType::Outc => self
+                        | InstructionType::Outc
+                        | InstructionType::Savr
+                        | InstructionType::Restr => self
                             .try_parse_argument(&[ArgumentType::Register])
                             .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
                         InstructionType::Jmp
@@ -390,7 +281,30 @@ impl ASMCompiler {
                             args.insert(2, procedure_hash.to_le_bytes().to_vec());
                             args
                         }
-                        InstructionType::Ret | InstructionType::Halt => ParsedArguments::default(),
+                        InstructionType::Enter => self
+                            .try_parse_argument(&[ArgumentType::U64])
+                            .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
+                        InstructionType::Arg => {
+                            let mut subopcode = ARG_NUM;
+                            let mut args = self
+                                .try_parse_argument(&[ArgumentType::U32, ArgumentType::U64])
+                                .or_else(|| {
+                                    subopcode = ARG_REG;
+                                    self.try_parse_argument(&[
+                                        ArgumentType::U32,
+                                        ArgumentType::Register,
+                                    ])
+                                })
+                                .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
+                            args.insert(0, vec![subopcode]);
+                            args
+                        }
+                        InstructionType::LArg => self
+                            .try_parse_argument(&[ArgumentType::Register, ArgumentType::U32])
+                            .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
+                        InstructionType::Ret | InstructionType::Leave | InstructionType::Halt => {
+                            ParsedArguments::default()
+                        }
                     }
                     .finalize();
                     self.write_instruction(instruction.opcode(), &argument);

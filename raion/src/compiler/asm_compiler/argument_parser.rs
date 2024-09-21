@@ -1,4 +1,4 @@
-use common::register::RegisterType;
+use common::{inline_if, register::RegisterType};
 use xxhash_rust::xxh3::xxh3_64;
 
 use crate::{compiler::CompilerBase, token::asm_token::ASMToken};
@@ -9,20 +9,19 @@ use super::LabelReplace;
 pub enum ArgumentType {
     Register,
     RegisterSp,
-    Number,
+    U64,
+    U32,
     Section,
     Label,
     DerefRegister,
-    DerefRegisterSpOffsetAdd,
-    DerefRegisterSpOffsetSub,
-    DerefRegisterOffsetAdd,
-    DerefRegisterOffsetSub,
+    DerefRegisterOffset,
 }
 
 enum ParsedArgument {
     Register(RegisterType),
-    Interger(u64),
-    Offset(u32),
+    U64(u64),
+    U32(u32),
+    Booolean(bool),
     Section(u64),
     Label(String),
     Buffer(Vec<u8>),
@@ -55,10 +54,10 @@ impl ParsedArguments {
 
         for arg in self.arguments {
             match arg {
-                ParsedArgument::Interger(data) | ParsedArgument::Section(data) => {
+                ParsedArgument::U64(data) | ParsedArgument::Section(data) => {
                     buffer.extend_from_slice(&data.to_le_bytes())
                 }
-                ParsedArgument::Offset(offset) => buffer.extend_from_slice(&offset.to_le_bytes()),
+                ParsedArgument::U32(value) => buffer.extend_from_slice(&value.to_le_bytes()),
                 ParsedArgument::Register(register) => buffer.push(register.to_byte()),
                 ParsedArgument::Label(label) => {
                     label_replaces.push(LabelReplace {
@@ -67,6 +66,9 @@ impl ParsedArguments {
                         line: self.line,
                     });
                     buffer.extend_from_slice(&0u64.to_le_bytes())
+                }
+                ParsedArgument::Booolean(value) => {
+                    buffer.push(inline_if!(value, 1, 0));
                 }
                 ParsedArgument::Buffer(data) => buffer.extend_from_slice(&data),
             }
@@ -105,7 +107,7 @@ impl<'a> ArgumentParser<'a> {
         let len = self.arguments_parse.len();
         for (i, argument) in self.arguments_parse.iter().enumerate() {
             let valid = match argument {
-                ArgumentType::Number => {
+                ArgumentType::U64 | ArgumentType::U32 => {
                     self.match_token(self.current_offset, |e| matches!(e, ASMToken::Interger(_)))
                 }
                 ArgumentType::Register => {
@@ -127,44 +129,11 @@ impl<'a> ArgumentParser<'a> {
                     self.current_offset += 2;
                     value
                 }
-                ArgumentType::DerefRegisterSpOffsetAdd => {
+                ArgumentType::DerefRegisterOffset => {
                     let value = self.match_token_sequence(&[
                         |e: &ASMToken| matches!(e, ASMToken::LBracket),
-                        |e: &ASMToken| matches!(e, ASMToken::Register(RegisterType::SP)),
-                        |e: &ASMToken| matches!(e, ASMToken::Plus),
-                        |e: &ASMToken| matches!(e, ASMToken::Interger(_)),
-                        |e: &ASMToken| matches!(e, ASMToken::RBracket),
-                    ]);
-                    self.current_offset += 4;
-                    value
-                }
-                ArgumentType::DerefRegisterSpOffsetSub => {
-                    let value = self.match_token_sequence(&[
-                        |e: &ASMToken| matches!(e, ASMToken::LBracket),
-                        |e: &ASMToken| matches!(e, ASMToken::Register(RegisterType::SP)),
-                        |e: &ASMToken| matches!(e, ASMToken::Minus),
-                        |e: &ASMToken| matches!(e, ASMToken::Interger(_)),
-                        |e: &ASMToken| matches!(e, ASMToken::RBracket),
-                    ]);
-                    self.current_offset += 4;
-                    value
-                }
-                ArgumentType::DerefRegisterOffsetSub => {
-                    let value = self.match_token_sequence(&[
-                        |e: &ASMToken| matches!(e, ASMToken::LBracket),
-                        |e: &ASMToken| e.is_register_and_general(),
-                        |e: &ASMToken| matches!(e, ASMToken::Minus),
-                        |e: &ASMToken| matches!(e, ASMToken::Interger(_)),
-                        |e: &ASMToken| matches!(e, ASMToken::RBracket),
-                    ]);
-                    self.current_offset += 4;
-                    value
-                }
-                ArgumentType::DerefRegisterOffsetAdd => {
-                    let value = self.match_token_sequence(&[
-                        |e: &ASMToken| matches!(e, ASMToken::LBracket),
-                        |e: &ASMToken| e.is_register_and_general(),
-                        |e: &ASMToken| matches!(e, ASMToken::Plus),
+                        |e: &ASMToken| matches!(e, ASMToken::Register(_)),
+                        |e: &ASMToken| matches!(e, ASMToken::Minus | ASMToken::Plus),
                         |e: &ASMToken| matches!(e, ASMToken::Interger(_)),
                         |e: &ASMToken| matches!(e, ASMToken::RBracket),
                     ]);
@@ -207,12 +176,19 @@ impl<'a> ArgumentParser<'a> {
                     };
                     arguments.push(ParsedArgument::Register(register.clone()));
                 }
-                ArgumentType::Number => {
+                ArgumentType::U64 => {
                     let number = match self.compiler.peek(self.current_offset).unwrap() {
                         ASMToken::Interger(number) => number,
                         _ => unreachable!(),
                     };
-                    arguments.push(ParsedArgument::Interger(*number));
+                    arguments.push(ParsedArgument::U64(*number));
+                }
+                ArgumentType::U32 => {
+                    let number = match self.compiler.peek(self.current_offset).unwrap() {
+                        ASMToken::Interger(number) => number,
+                        _ => unreachable!(),
+                    };
+                    arguments.push(ParsedArgument::U32(*number as u32));
                 }
                 ArgumentType::Section => {
                     let ident = match self.compiler.peek(self.current_offset).unwrap() {
@@ -237,10 +213,7 @@ impl<'a> ArgumentParser<'a> {
 
                     self.current_offset += 2;
                 }
-                ArgumentType::DerefRegisterSpOffsetAdd
-                | ArgumentType::DerefRegisterSpOffsetSub
-                | ArgumentType::DerefRegisterOffsetAdd
-                | ArgumentType::DerefRegisterOffsetSub => {
+                ArgumentType::DerefRegisterOffset => {
                     let register = match self.compiler.peek(self.current_offset + 1).unwrap() {
                         ASMToken::Register(register) => register,
                         _ => unreachable!(),
@@ -251,7 +224,13 @@ impl<'a> ArgumentParser<'a> {
                     };
 
                     arguments.push(ParsedArgument::Register(register.clone()));
-                    arguments.push(ParsedArgument::Offset(*offset as u32));
+                    arguments.push(ParsedArgument::U32(*offset as u32));
+                    let is_add = match self.compiler.peek(self.current_offset + 2).unwrap() {
+                        ASMToken::Plus => true,
+                        ASMToken::Minus => false,
+                        _ => unreachable!(),
+                    };
+                    arguments.push(ParsedArgument::Booolean(is_add));
 
                     self.current_offset += 4;
                 }

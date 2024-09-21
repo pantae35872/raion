@@ -2,9 +2,10 @@ use std::{fmt::Display, str::FromStr};
 
 use common::{
     constants::{
-        ADD_OPCODE, CALL_OPCODE, CMP_OPCODE, HALT_OPCODE, INC_OPCODE, JACC_OPCODE, JACE_OPCODE,
-        JACN_OPCODE, JACZ_OPCODE, JMC_OPCODE, JME_OPCODE, JMN_OPCODE, JMP_OPCODE, JMZ_OPCODE,
-        MOV_OPCODE, OUTC_OPCODE, POP_OPCODE, PUSH_OPCODE, RET_OPCODE, SUB_OPCODE,
+        ADD_OPCODE, ARG_OPCODE, CALL_OPCODE, CMP_OPCODE, ENTER_OPCODE, HALT_OPCODE, INC_OPCODE,
+        JACC_OPCODE, JACE_OPCODE, JACN_OPCODE, JACZ_OPCODE, JMC_OPCODE, JME_OPCODE, JMN_OPCODE,
+        JMP_OPCODE, JMZ_OPCODE, LARG_OPCODE, LEAVE_OPCODE, MOV_OPCODE, OUTC_OPCODE, POP_OPCODE,
+        PUSH_OPCODE, RESTR_OPCODE, RET_OPCODE, SAVR_OPCODE, SUB_OPCODE,
     },
     register::RegisterType,
 };
@@ -33,6 +34,12 @@ pub enum InstructionType {
     Jacz,
     Call,
     Ret,
+    Leave,
+    Enter,
+    Arg,
+    LArg,
+    Savr,
+    Restr,
 }
 
 impl InstructionType {
@@ -58,6 +65,12 @@ impl InstructionType {
             Self::Ret => return RET_OPCODE,
             Self::Outc => return OUTC_OPCODE,
             Self::Halt => return HALT_OPCODE,
+            Self::Enter => return ENTER_OPCODE,
+            Self::Leave => return LEAVE_OPCODE,
+            Self::Arg => return ARG_OPCODE,
+            Self::LArg => return LARG_OPCODE,
+            Self::Savr => return SAVR_OPCODE,
+            Self::Restr => return RESTR_OPCODE,
         }
     }
 }
@@ -89,6 +102,12 @@ impl FromStr for InstructionType {
             "ret" => return Ok(Self::Ret),
             "outc" => return Ok(Self::Outc),
             "halt" => return Ok(Self::Halt),
+            "enter" => return Ok(Self::Enter),
+            "leave" => return Ok(Self::Leave),
+            "arg" => return Ok(Self::Arg),
+            "larg" => return Ok(Self::LArg),
+            "savr" => return Ok(Self::Savr),
+            "restr" => return Ok(Self::Restr),
             _ => return Err(FailToParseFromString),
         }
     }
@@ -117,6 +136,12 @@ impl Display for InstructionType {
             Self::Ret => write!(f, "ret"),
             Self::Call => write!(f, "call"),
             Self::Sub => write!(f, "sub"),
+            Self::Enter => write!(f, "enter"),
+            Self::Leave => write!(f, "leave"),
+            Self::Arg => write!(f, "arg"),
+            Self::LArg => write!(f, "larg"),
+            Self::Savr => write!(f, "savr"),
+            Self::Restr => write!(f, "restr"),
         }
     }
 }

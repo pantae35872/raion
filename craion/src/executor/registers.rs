@@ -30,6 +30,10 @@ pub struct RegisterFile {
     ip: Address,
     sp: Address,
     flags: Flags,
+    saved_a_register: Vec<u64>,
+    saved_b_register: Vec<u64>,
+    saved_c_register: Vec<u64>,
+    saved_d_register: Vec<u64>,
 }
 
 #[derive(Debug)]
@@ -67,7 +71,43 @@ impl RegisterFile {
             ip: Address::new(0x0),
             sp: Address::new(0x0),
             flags: Flags::empty(),
+            saved_a_register: Vec::new(),
+            saved_b_register: Vec::new(),
+            saved_d_register: Vec::new(),
+            saved_c_register: Vec::new(),
         }
+    }
+
+    pub fn save_a_register(&mut self) {
+        self.saved_a_register.push(self.a);
+    }
+
+    pub fn save_b_register(&mut self) {
+        self.saved_a_register.push(self.b);
+    }
+
+    pub fn save_c_register(&mut self) {
+        self.saved_a_register.push(self.c);
+    }
+
+    pub fn save_d_register(&mut self) {
+        self.saved_a_register.push(self.d);
+    }
+
+    pub fn restore_a_register(&mut self) {
+        self.a = self.saved_a_register.pop().unwrap_or(0);
+    }
+
+    pub fn restore_b_register(&mut self) {
+        self.b = self.saved_b_register.pop().unwrap_or(0);
+    }
+
+    pub fn restore_c_register(&mut self) {
+        self.c = self.saved_c_register.pop().unwrap_or(0);
+    }
+
+    pub fn restore_d_register(&mut self) {
+        self.d = self.saved_d_register.pop().unwrap_or(0);
     }
 
     pub fn set_sp(&mut self, data: Address) {

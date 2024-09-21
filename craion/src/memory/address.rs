@@ -50,6 +50,16 @@ impl From<usize> for Address {
     }
 }
 
+impl From<u64> for Address {
+    fn from(value: u64) -> Self {
+        Self(
+            value
+                .try_into()
+                .expect("The target usize is not 64 bit wide"),
+        )
+    }
+}
+
 impl Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:#x}", self.0)
