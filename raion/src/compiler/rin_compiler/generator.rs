@@ -120,8 +120,9 @@ impl<'a> ProcGenerator<'a> {
                 },
             );
             self.add_instruction(format!("larg a64, {i}"));
-            self.add_instruction(format!("mov [sp + {}], a64", self.stack_loc));
-            self.stack_loc += 8;
+            let bits = parameter.param_type.size().byte() * 8;
+            self.add_instruction(format!("mov [sp + {}], a{bits}", self.stack_loc));
+            self.stack_loc += parameter.param_type.size().byte();
         }
         let return_type = self.gen_block(&proc.body)?;
         self.body
@@ -191,7 +192,9 @@ impl<'a> ProcGenerator<'a> {
                     .get(name)
                     .ok_or(GeneratorError::UndefinedVariable(name))?;
                 let stack_loc = variable.stack_loc;
-                self.add_instruction(format!("mov [sp + {stack_loc}], a64"));
+                let bits = variable.var_type.size().byte() * 8;
+                self.add_instruction(";var mutate");
+                self.add_instruction(format!("mov [sp + {stack_loc}], a{bits}"));
             }
             Statement::Return(expr) => {
                 let typ = self.gen_expression(
@@ -325,6 +328,7 @@ impl<'a> ProcGenerator<'a> {
                 let stack_loc = variable.stack_loc;
                 let size = var_type.size().byte();
                 let bits = size * 8;
+
                 self.add_instruction(format!("mov a{bits}, [sp + {stack_loc}]"));
                 self.add_instruction(format!("mov [sp + {}], a{bits}", self.stack_loc));
                 self.stack_loc += size;

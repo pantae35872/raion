@@ -15,7 +15,7 @@ pub mod registers;
 
 #[derive(Debug)]
 pub struct ExecutorState {
-    stack_saved_size: u64,
+    stack_saved_size: Vec<u64>,
     procedure_arguments: HashMap<u32, u64>,
     exit_code: u64,
 }
@@ -32,20 +32,18 @@ pub struct Executor {
 impl ExecutorState {
     pub fn new() -> Self {
         Self {
-            stack_saved_size: 0,
+            stack_saved_size: Vec::new(),
             procedure_arguments: HashMap::new(),
             exit_code: 0,
         }
     }
 
     pub fn save_stack_size(&mut self, size: u64) {
-        self.stack_saved_size = size;
+        self.stack_saved_size.push(size);
     }
 
     pub fn consume_stack_size(&mut self) -> u64 {
-        let prev = self.stack_saved_size;
-        self.stack_saved_size = 0;
-        return prev;
+        return self.stack_saved_size.pop().unwrap_or(0);
     }
 
     pub fn load_argument(&mut self, index: u32, value: u64) {

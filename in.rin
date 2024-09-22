@@ -2,24 +2,33 @@ import std; // Not implemented
 
 module abc; // Not implemented
 
-//proc main():u64 -> {
-//  u64 aaa = 10u64;
-//  u64 bbb = 20u64;
-//  u32 b = 1020u32;
-//  u32 a = b;
-//  bbb = bbb + 5u64;
-//  u64 abc = main.add(aaa, bbb, 5u64);
-//  return abc;
+//proc main():u32 -> {
+//  u32 part1 = main.part1();
+//  u32 part2 = main.part2();
+//  return part1;
 //}
 //
-//proc add(u64 num1, u64 num2, u64 num3):u64 -> {
-//  u64 x = num1 + num2 + num3 + main.another_fn() * 5u64;
-//  x = x + 10u64;
+//proc part1():u32 -> {
+//  u32 aaa = 10u32;
+//  u32 bbb = 20u32;
+//  u32 ccc = 30u32;
+//  return main.add(aaa, bbb, ccc);
+//}
+//
+//proc part2():u32 -> {
+//  u32 aaa = 20u32;
+//  u32 bbb = 20u32;
+//  u32 ccc = 5u32;
+//  return main.add(aaa, bbb, ccc);
+//}
+//
+//proc add(u32 num1, u32 num2, u32 num3):u32 -> {
+//  u32 x = num1 + num2 + num3;
 //  return x;
 //}
 //
-//proc another_fn():u64 -> {
-//  return 69u64;
+//proc another_fn():u32 -> {
+//  return 69u32;
 //}
 
 //proc main():u64 -> {
