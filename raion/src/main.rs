@@ -7,7 +7,10 @@ use std::{
 
 use common::sin::Sin;
 use raion::{
-    compiler::{asm_compiler::ASMCompiler, rin_compiler::RinCompiler},
+    compiler::{
+        asm_compiler::ASMCompiler,
+        rin_compiler::{Path as RinPath, RinCompiler},
+    },
     lexer::{asm_lexer::ASMLexer, rin_lexer::RinLexer},
 };
 
@@ -17,7 +20,7 @@ fn main() -> ExitCode {
     file.read_to_string(&mut data).unwrap();
     let lexer = RinLexer::new(&data);
     let tokens = lexer.tokenize().expect("Failed to tokenize rin");
-    let mut compiler = RinCompiler::new(tokens);
+    let mut compiler = RinCompiler::new(tokens, RinPath::new("main"));
     match compiler.parse() {
         Ok(_) => {}
         Err(err) => {

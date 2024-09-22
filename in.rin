@@ -51,65 +51,66 @@ module abc; // Not implemented
 //  return 42u64;
 //}
 
-proc main(): u64 -> {
-  u64 result1 = main.part1();
-  u64 result2 = main.part2();
-  u64 result3 = main.part3();
-  u64 result4 = main.part4();
-  u64 final_result = result1 + result2 + result3 + result4;
+
+proc part1(): u32 -> {
+  u32 a = 1u32;
+  u32 b = 2u32;
+  u32 c = 3u32;
+  u32 d = 4u32;
+  u32 e = 5u32;
+  return sum(a, b, c, d, e);
+}
+
+proc main(): u32 -> {
+  u32 result1 = part1();
+  u32 result2 = part2();
+  u32 result3 = part3();
+  u32 result4 = part4();
+  u32 final_result = result1 + result2 + result3 + result4;
   return final_result;
 }
 
-proc part1(): u64 -> {
-  u64 a = 1u64;
-  u64 b = 2u64;
-  u64 c = 3u64;
-  u64 d = 4u64;
-  u64 e = 5u64;
-  return main.sum(a, b, c, d, e);
+proc part2(): u32 -> {
+  u32 f = 6u32;
+  u32 g = 7u32;
+  u32 h = 8u32;
+  u32 i = 9u32;
+  u32 j = 10u32;
+  return sum(f, g, h, i, j);
 }
 
-proc part2(): u64 -> {
-  u64 f = 6u64;
-  u64 g = 7u64;
-  u64 h = 8u64;
-  u64 i = 9u64;
-  u64 j = 10u64;
-  return main.sum(f, g, h, i, j);
+proc part3(): u32 -> {
+  u32 k = 11u32;
+  u32 l = 12u32;
+  u32 m = 13u32;
+  u32 n = 14u32;
+  u32 o = 15u32;
+  return sum(k, l, m, n, o);
 }
 
-proc part3(): u64 -> {
-  u64 k = 11u64;
-  u64 l = 12u64;
-  u64 m = 13u64;
-  u64 n = 14u64;
-  u64 o = 15u64;
-  return main.sum(k, l, m, n, o);
+proc part4(): u32 -> {
+  u32 p = 16u32;
+  u32 q = 17u32;
+  u32 r = 18u32;
+  u32 s = 19u32;
+  u32 t = 20u32;
+  return sum(p, q, r, s, t);
 }
 
-proc part4(): u64 -> {
-  u64 p = 16u64;
-  u64 q = 17u64;
-  u64 r = 18u64;
-  u64 s = 19u64;
-  u64 t = 20u64;
-  return main.sum(p, q, r, s, t);
-}
-
-proc sum(u64 num1, u64 num2, u64 num3, u64 num4, u64 num5): u64 -> {
-  u64 result = num1 + num2 + num3 + num4 + num5;
-  u64 modified_result = main.modify_result(result);
+proc sum(u32 num1, u32 num2, u32 num3, u32 num4, u32 num5): u32 -> {
+  u32 result = num1 + num2 + num3 + num4 + num5;
+  u32 modified_result = modify_result(result);
   return modified_result;
 }
 
-proc modify_result(u64 input): u64 -> {
-  u64 x = input * 2u64;
-  x = x + 10u64;
-  x = x / 3u64;
-  x = x * main.extra_modifier();
+proc modify_result(u32 input): u32 -> {
+  u32 x = input * 2u32;
+  x = x + 10u32;
+  x = x / 3u32;
+  x = x * extra_modifier();
   return x;
 }
 
-proc extra_modifier(): u64 -> {
-  return 7u64;
+proc extra_modifier(): u32 -> {
+  return 7u32;
 }

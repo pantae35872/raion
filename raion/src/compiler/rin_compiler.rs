@@ -27,7 +27,7 @@ struct Module {
 
 #[derive(Debug)]
 struct Procedure {
-    name: Path,
+    name: String,
     return_type: Type,
     parameters: Vec<Parameter>,
     body: Block,
@@ -121,13 +121,15 @@ pub struct Path {
 pub struct RinCompiler {
     base: CompilerBase<RinToken>,
     program: RinAst,
+    module_path: Path,
 }
 
 impl RinCompiler {
-    pub fn new(tokens: Vec<RinToken>) -> Self {
+    pub fn new(tokens: Vec<RinToken>, module_path: Path) -> Self {
         Self {
             base: CompilerBase::new(tokens),
             program: RinAst::default(),
+            module_path,
         }
     }
 
@@ -137,7 +139,7 @@ impl RinCompiler {
 
     pub fn generate(&self) -> Result<String, GeneratorError> {
         let generator = Generator::new();
-        generator.generate(&self.program)
+        return generator.generate(&self.program, &self.module_path);
     }
 
     pub fn parse(&mut self) -> Result<(), CompilerError<RinToken>> {
@@ -187,9 +189,7 @@ impl RinCompiler {
         self.base.expect_token(RinToken::Arrow)?;
         let block = self.parse_block()?;
         return Ok(Procedure {
-            name: Path {
-                path: vec!["main".to_string(), name],
-            },
+            name,
             return_type,
             parameters: params,
             body: block,
@@ -526,9 +526,21 @@ impl RinCompiler {
     }
 }
 
+impl Path {
+    pub fn new(value: &str) -> Self {
+        Self {
+            path: value.split(".").map(|e| e.to_string()).collect(),
+        }
+    }
+
+    pub fn parse(&self) -> String {
+        self.path.join("$")
+    }
+}
+
 impl Display for Path {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.path.join("$"))
+        write!(f, "{}", self.path.join("."))
     }
 }
 
