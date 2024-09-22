@@ -250,7 +250,8 @@ impl ASMCompiler {
                         | InstructionType::Push
                         | InstructionType::Outc
                         | InstructionType::Savr
-                        | InstructionType::Restr => self
+                        | InstructionType::Restr
+                        | InstructionType::Exit => self
                             .try_parse_argument(&[ArgumentType::Register])
                             .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
                         InstructionType::Jmp
@@ -309,6 +310,7 @@ impl ASMCompiler {
                     .finalize();
                     self.write_instruction(instruction.opcode(), &argument);
 
+                    // Replace the label using the real offset not argument offset
                     for label_replace in label_replaces.iter_mut() {
                         label_replace.pos = self.write_pos - (argument.len() - label_replace.pos);
                     }

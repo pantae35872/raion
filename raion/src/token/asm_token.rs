@@ -2,10 +2,10 @@ use std::{fmt::Display, str::FromStr};
 
 use common::{
     constants::{
-        ADD_OPCODE, ARG_OPCODE, CALL_OPCODE, CMP_OPCODE, ENTER_OPCODE, HALT_OPCODE, INC_OPCODE,
-        JACC_OPCODE, JACE_OPCODE, JACN_OPCODE, JACZ_OPCODE, JMC_OPCODE, JME_OPCODE, JMN_OPCODE,
-        JMP_OPCODE, JMZ_OPCODE, LARG_OPCODE, LEAVE_OPCODE, MOV_OPCODE, OUTC_OPCODE, POP_OPCODE,
-        PUSH_OPCODE, RESTR_OPCODE, RET_OPCODE, SAVR_OPCODE, SUB_OPCODE,
+        ADD_OPCODE, ARG_OPCODE, CALL_OPCODE, CMP_OPCODE, ENTER_OPCODE, EXIT_OPCODE, HALT_OPCODE,
+        INC_OPCODE, JACC_OPCODE, JACE_OPCODE, JACN_OPCODE, JACZ_OPCODE, JMC_OPCODE, JME_OPCODE,
+        JMN_OPCODE, JMP_OPCODE, JMZ_OPCODE, LARG_OPCODE, LEAVE_OPCODE, MOV_OPCODE, OUTC_OPCODE,
+        POP_OPCODE, PUSH_OPCODE, RESTR_OPCODE, RET_OPCODE, SAVR_OPCODE, SUB_OPCODE,
     },
     register::RegisterType,
 };
@@ -40,6 +40,7 @@ pub enum InstructionType {
     LArg,
     Savr,
     Restr,
+    Exit,
 }
 
 impl InstructionType {
@@ -71,6 +72,7 @@ impl InstructionType {
             Self::LArg => return LARG_OPCODE,
             Self::Savr => return SAVR_OPCODE,
             Self::Restr => return RESTR_OPCODE,
+            Self::Exit => return EXIT_OPCODE,
         }
     }
 }
@@ -108,6 +110,7 @@ impl FromStr for InstructionType {
             "larg" => return Ok(Self::LArg),
             "savr" => return Ok(Self::Savr),
             "restr" => return Ok(Self::Restr),
+            "exit" => return Ok(Self::Exit),
             _ => return Err(FailToParseFromString),
         }
     }
@@ -142,6 +145,7 @@ impl Display for InstructionType {
             Self::LArg => write!(f, "larg"),
             Self::Savr => write!(f, "savr"),
             Self::Restr => write!(f, "restr"),
+            Self::Exit => write!(f, "exit"),
         }
     }
 }

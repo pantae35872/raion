@@ -36,6 +36,7 @@ mod arg;
 mod call;
 mod cmp;
 mod enter;
+mod exit;
 mod halt;
 mod inc;
 mod jacc;

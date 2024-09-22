@@ -29,6 +29,7 @@ pub const CALL_OPCODE: u16 = 73;
 pub const RET_OPCODE: u16 = 74;
 
 //Cpu state releate instructions
+pub const EXIT_OPCODE: u16 = 65534;
 pub const HALT_OPCODE: u16 = 65535;
 
 // IO instructions

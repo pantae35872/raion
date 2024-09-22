@@ -5,13 +5,14 @@ module abc;
 proc main():u64 -> {
   u64 aaa = 10;
   u64 bbb = 20;
-  u64 result = add(aaa, bbb, 5);
-  std.print("Hello World!");
-  return 0;
+  u32 a = 10;
+  u64 result = main.add(aaa, bbb, 5);
+  return result;
 }
 
 proc add(u64 num1, u64 num2, u64 num3):u64 -> {
-  u64 x = num1 + num2 + num3 + another_fn();
+  u64 x = num1 + num2 + num3;
+  x = x + 10;
   return x;
 }
 

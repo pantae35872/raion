@@ -27,7 +27,7 @@ impl<'a> ASMLexer<'a> {
                 while self
                     .base
                     .peek(0)
-                    .is_some_and(|e| e.is_alphanumeric() || e == '_')
+                    .is_some_and(|e| e.is_alphanumeric() || e == '_' || e == '$')
                 {
                     buffer.push(self.base.consume().unwrap());
                 }

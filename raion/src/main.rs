@@ -23,14 +23,27 @@ fn main() -> ExitCode {
         Err(err) => {
             eprintln!("Compilation error");
             eprintln!("{}", err);
+            return ExitCode::FAILURE;
         }
     };
     let ast = compiler.program();
     println!("{ast:?}");
-    let mut file = File::open("in.asm").expect("file not found");
-    let mut abc = String::new();
-    file.read_to_string(&mut abc).unwrap();
-    let lexer = ASMLexer::new(&abc);
+    let generated_asm = match compiler.generate() {
+        Ok(res) => res,
+        Err(err) => {
+            eprintln!("Code generation error");
+            eprintln!("{err}");
+            return ExitCode::FAILURE;
+        }
+    };
+    println!("Generated:\n{generated_asm}");
+
+    if Path::new("out.asm").exists() {
+        fs::remove_file("out.asm").unwrap();
+    }
+    let mut file = File::create("out.asm").expect("UNNN");
+    write!(file, "{generated_asm}").unwrap();
+    let lexer = ASMLexer::new(&generated_asm);
     let tokens = lexer.tokenize().expect("Cannot parse");
     let compiler = ASMCompiler::new(tokens);
     match compiler.compile() {

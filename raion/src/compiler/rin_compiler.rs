@@ -1,9 +1,13 @@
+use generator::{Generator, GeneratorError};
+
 use crate::token::rin_token::{Keyword, Operator, PrimitiveType, RinToken};
 
 use super::{CompilerBase, CompilerError};
 
+mod generator;
+
 #[derive(Default, Debug)]
-pub struct Program {
+pub struct RinAst {
     imports: Vec<Import>,
     module: Vec<Module>,
     procedures: Vec<Procedure>,
@@ -21,9 +25,14 @@ struct Module {
 
 #[derive(Debug)]
 struct Procedure {
-    name: String,
+    name: Path,
     return_type: Type,
     parameters: Vec<Parameter>,
+    body: Block,
+}
+
+#[derive(Debug)]
+struct Block {
     body: Vec<Statement>,
 }
 
@@ -33,7 +42,7 @@ struct Parameter {
     name: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Type {
     U64,
     U32,
@@ -54,6 +63,10 @@ enum Statement {
     VariableDecl {
         name: String,
         var_type: Type,
+        value: Expression,
+    },
+    VariableMutate {
+        name: String,
         value: Expression,
     },
 }
@@ -92,19 +105,24 @@ struct Path {
 
 pub struct RinCompiler {
     base: CompilerBase<RinToken>,
-    program: Program,
+    program: RinAst,
 }
 
 impl RinCompiler {
     pub fn new(tokens: Vec<RinToken>) -> Self {
         Self {
             base: CompilerBase::new(tokens),
-            program: Program::default(),
+            program: RinAst::default(),
         }
     }
 
-    pub fn program(&self) -> &Program {
+    pub fn program(&self) -> &RinAst {
         return &self.program;
+    }
+
+    pub fn generate(&self) -> Result<String, GeneratorError> {
+        let generator = Generator::new();
+        generator.generate(&self.program)
     }
 
     pub fn parse(&mut self) -> Result<(), CompilerError<RinToken>> {
@@ -152,16 +170,18 @@ impl RinCompiler {
         self.base.expect_token(RinToken::Colon)?;
         let return_type = self.parse_type()?;
         self.base.expect_token(RinToken::Arrow)?;
-        let statements = self.parse_block()?;
+        let block = self.parse_block()?;
         return Ok(Procedure {
-            name,
+            name: Path {
+                path: vec!["main".to_string(), name],
+            },
             return_type,
             parameters: params,
-            body: statements,
+            body: block,
         });
     }
 
-    fn parse_block(&mut self) -> Result<Vec<Statement>, CompilerError<RinToken>> {
+    fn parse_block(&mut self) -> Result<Block, CompilerError<RinToken>> {
         self.base.expect_token(RinToken::LCurly)?;
         let mut statements = Vec::new();
         while let Some(token) = self.base.peek(0).cloned() {
@@ -185,7 +205,7 @@ impl RinCompiler {
             }
         }
         self.base.expect_token(RinToken::RCurly)?;
-        return Ok(statements);
+        return Ok(Block { body: statements });
     }
 
     fn parse_statement(&mut self) -> Result<Statement, CompilerError<RinToken>> {
@@ -208,6 +228,12 @@ impl RinCompiler {
                     var_type,
                     value,
                 })
+            }
+            RinToken::Identifier(_) => {
+                let name = self.parse_identifier()?;
+                self.base.expect_token(RinToken::Equals)?;
+                let value = self.parse_expression(0)?;
+                Ok(Statement::VariableMutate { name, value })
             }
             RinToken::Keyword(keyword) => match keyword {
                 Keyword::Return => {
@@ -442,6 +468,12 @@ impl RinCompiler {
                 self.base.current_line(),
             )),
         }
+    }
+}
+
+impl Path {
+    pub fn to_string(&self) -> String {
+        self.path.join("$")
     }
 }
 

@@ -17,6 +17,7 @@ pub mod registers;
 pub struct ExecutorState {
     stack_saved_size: u64,
     procedure_arguments: HashMap<u32, u64>,
+    exit_code: u64,
 }
 
 pub struct Executor {
@@ -33,6 +34,7 @@ impl ExecutorState {
         Self {
             stack_saved_size: 0,
             procedure_arguments: HashMap::new(),
+            exit_code: 0,
         }
     }
 
@@ -52,6 +54,10 @@ impl ExecutorState {
 
     pub fn get_argument(&self, index: u32) -> u64 {
         return *self.procedure_arguments.get(&index).unwrap_or(&0);
+    }
+
+    pub fn set_exit_code(&mut self, value: u64) {
+        self.exit_code = value;
     }
 }
 
@@ -124,6 +130,7 @@ impl Executor {
                 };
             }
         }
+        println!("Program exit with exit code {}", self.state.exit_code);
     }
 
     pub fn debug_register(&self) {
