@@ -192,7 +192,7 @@ impl ASMCompiler {
                             args.insert(0, vec![subopcode]);
                             args
                         }
-                        InstructionType::Cmp => self
+                        InstructionType::Cmp | InstructionType::Mul | InstructionType::Div => self
                             .try_parse_argument(&[ArgumentType::Register, ArgumentType::Register])
                             .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
                         InstructionType::Add => {

@@ -18,9 +18,20 @@ pub enum RegisterType {
     D16,
     D32,
     D64,
-    IP,
-    SP,
-    FLAGS,
+    Ip,
+    Sp,
+    Flags,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RegisterTypeGroup {
+    A,
+    B,
+    C,
+    D,
+    Ip,
+    Sp,
+    Flags,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -38,6 +49,20 @@ impl RegisterSizes {
             RegisterSizes::SizeU16 => return 2,
             RegisterSizes::SizeU32 => return 4,
             RegisterSizes::SizeU64 => return 8,
+        }
+    }
+}
+
+impl Display for RegisterTypeGroup {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::A => write!(f, "a"),
+            Self::B => write!(f, "b"),
+            Self::C => write!(f, "c"),
+            Self::D => write!(f, "d"),
+            Self::Ip => write!(f, "ip"),
+            Self::Sp => write!(f, "sp"),
+            Self::Flags => write!(f, "flags"),
         }
     }
 }
@@ -61,9 +86,9 @@ impl Display for RegisterType {
             RegisterType::D16 => write!(f, "d16"),
             RegisterType::D32 => write!(f, "d32"),
             RegisterType::D64 => write!(f, "d64"),
-            RegisterType::IP => write!(f, "instruction pointer"),
-            RegisterType::FLAGS => write!(f, "flags"),
-            RegisterType::SP => write!(f, "stack pointer"),
+            RegisterType::Ip => write!(f, "instruction pointer"),
+            RegisterType::Flags => write!(f, "flags"),
+            RegisterType::Sp => write!(f, "stack pointer"),
         }
     }
 }
@@ -88,6 +113,18 @@ impl Display for RegisterParseError {
 impl Error for RegisterParseError {}
 
 impl RegisterType {
+    pub fn group(&self) -> RegisterTypeGroup {
+        return match self {
+            Self::A64 | Self::A32 | Self::A16 | Self::A8 => RegisterTypeGroup::A,
+            Self::B64 | Self::B32 | Self::B16 | Self::B8 => RegisterTypeGroup::B,
+            Self::C64 | Self::C32 | Self::C16 | Self::C8 => RegisterTypeGroup::C,
+            Self::D64 | Self::D32 | Self::D16 | Self::D8 => RegisterTypeGroup::D,
+            Self::Sp => RegisterTypeGroup::Sp,
+            Self::Ip => RegisterTypeGroup::Ip,
+            Self::Flags => RegisterTypeGroup::Flags,
+        };
+    }
+
     pub fn from_byte(byte_form: u8) -> Result<Self, RegisterParseError> {
         return match byte_form {
             1 => Ok(Self::A8),
@@ -106,9 +143,9 @@ impl RegisterType {
             14 => Ok(Self::D16),
             15 => Ok(Self::D32),
             16 => Ok(Self::D64),
-            253 => Ok(Self::FLAGS),
-            254 => Ok(Self::SP),
-            255 => Ok(Self::IP),
+            253 => Ok(Self::Flags),
+            254 => Ok(Self::Sp),
+            255 => Ok(Self::Ip),
             e => Err(RegisterParseError::InvalidByteForm(e)),
         };
     }
@@ -131,20 +168,20 @@ impl RegisterType {
             Self::D16 => 14,
             Self::D32 => 15,
             Self::D64 => 16,
-            Self::FLAGS => 253,
-            Self::SP => 254,
-            Self::IP => 255,
+            Self::Flags => 253,
+            Self::Sp => 254,
+            Self::Ip => 255,
         };
     }
 
     pub fn size(&self) -> RegisterSizes {
         match self {
             Self::A8 | Self::B8 | Self::C8 | Self::D8 => return RegisterSizes::SizeU8,
-            Self::A16 | Self::B16 | Self::C16 | Self::D16 | Self::FLAGS => {
+            Self::A16 | Self::B16 | Self::C16 | Self::D16 | Self::Flags => {
                 return RegisterSizes::SizeU16;
             }
             Self::A32 | Self::B32 | Self::C32 | Self::D32 => return RegisterSizes::SizeU32,
-            Self::A64 | Self::B64 | Self::C64 | Self::D64 | Self::IP | Self::SP => {
+            Self::A64 | Self::B64 | Self::C64 | Self::D64 | Self::Ip | Self::Sp => {
                 return RegisterSizes::SizeU64;
             }
         }
@@ -174,8 +211,8 @@ impl FromStr for RegisterType {
             "d16" => return Ok(Self::D16),
             "d32" => return Ok(Self::D32),
             "d64" => return Ok(Self::D64),
-            "sp" => return Ok(Self::SP),
-            "ip" => return Ok(Self::IP),
+            "sp" => return Ok(Self::Sp),
+            "ip" => return Ok(Self::Ip),
             _ => return Err(FailToParseFromString),
         }
     }

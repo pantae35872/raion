@@ -1,22 +1,106 @@
-import std;
+import std; // Not implemented
 
-module abc;
+module abc; // Not implemented
 
-proc main():u64 -> {
-  u64 aaa = 10;
-  u64 bbb = 20;
-  u32 a = 10;
-  u64 result = main.add(aaa, bbb, 5);
-  return result;
+//proc main():u64 -> {
+//  u64 aaa = 10u64;
+//  u64 bbb = 20u64;
+//  u32 b = 1020u32;
+//  u32 a = b;
+//  bbb = bbb + 5u64;
+//  u64 abc = main.add(aaa, bbb, 5u64);
+//  return abc;
+//}
+//
+//proc add(u64 num1, u64 num2, u64 num3):u64 -> {
+//  u64 x = num1 + num2 + num3 + main.another_fn() * 5u64;
+//  x = x + 10u64;
+//  return x;
+//}
+//
+//proc another_fn():u64 -> {
+//  return 69u64;
+//}
+
+//proc main():u64 -> {
+//  u64 x = 15u64;
+//  u64 y = 25u64;
+//  u32 z = 500u32;
+//  u32 w = z;
+//  x = x + 7u64;
+//  u64 result = main.multiply(x, y, 2u64);
+//  return result;
+//}
+//
+//proc multiply(u64 a, u64 b, u64 c):u64 -> {
+//  u64 result = a * b * c + main.extra_fn();
+//  result = result - 25u64 / 5u64;
+//  return result;
+//}
+//
+//proc extra_fn():u64 -> {
+//  return 42u64;
+//}
+
+proc main(): u64 -> {
+  u64 result1 = main.part1();
+  u64 result2 = main.part2();
+  u64 result3 = main.part3();
+  u64 result4 = main.part4();
+  u64 final_result = result1 + result2 + result3 + result4;
+  return final_result;
 }
 
-proc add(u64 num1, u64 num2, u64 num3):u64 -> {
-  u64 x = num1 + num2 + num3;
-  x = x + 10;
+proc part1(): u64 -> {
+  u64 a = 1u64;
+  u64 b = 2u64;
+  u64 c = 3u64;
+  u64 d = 4u64;
+  u64 e = 5u64;
+  return main.sum(a, b, c, d, e);
+}
+
+proc part2(): u64 -> {
+  u64 f = 6u64;
+  u64 g = 7u64;
+  u64 h = 8u64;
+  u64 i = 9u64;
+  u64 j = 10u64;
+  return main.sum(f, g, h, i, j);
+}
+
+proc part3(): u64 -> {
+  u64 k = 11u64;
+  u64 l = 12u64;
+  u64 m = 13u64;
+  u64 n = 14u64;
+  u64 o = 15u64;
+  return main.sum(k, l, m, n, o);
+}
+
+proc part4(): u64 -> {
+  u64 p = 16u64;
+  u64 q = 17u64;
+  u64 r = 18u64;
+  u64 s = 19u64;
+  u64 t = 20u64;
+  return main.sum(p, q, r, s, t);
+}
+
+proc sum(u64 num1, u64 num2, u64 num3, u64 num4, u64 num5): u64 -> {
+  u64 result = num1 + num2 + num3 + num4 + num5;
+  u64 modified_result = main.modify_result(result);
+  return modified_result;
+}
+
+proc modify_result(u64 input): u64 -> {
+  u64 x = input * 2u64;
+  x = x + 10u64;
+  x = x / 3u64;
+  x = x * main.extra_modifier();
   return x;
 }
 
-proc another_fn():u64 -> {
-  return 69;
+proc extra_modifier(): u64 -> {
+  return 7u64;
 }
-

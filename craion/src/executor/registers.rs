@@ -211,9 +211,9 @@ impl RegisterFile {
             RegisterType::D16 => self.get_d16().into(),
             RegisterType::D32 => self.get_d32().into(),
             RegisterType::D64 => self.get_d64(),
-            RegisterType::IP => self.get_ip().get_raw() as u64,
-            RegisterType::SP => self.get_sp().get_raw() as u64,
-            RegisterType::FLAGS => self.get_flags().bits().into(),
+            RegisterType::Ip => self.get_ip().get_raw() as u64,
+            RegisterType::Sp => self.get_sp().get_raw() as u64,
+            RegisterType::Flags => self.get_flags().bits().into(),
         }
     }
 
@@ -235,9 +235,9 @@ impl RegisterFile {
             RegisterType::D16 => self.set_d16(data as u16),
             RegisterType::D32 => self.set_d32(data as u32),
             RegisterType::D64 => self.set_d64(data as u64),
-            RegisterType::IP => self.set_ip(Address::new(data as usize)),
-            RegisterType::SP => self.set_sp(Address::new(data as usize)),
-            RegisterType::FLAGS => self.set_flags(Flags::from_bits_retain(data as u16)),
+            RegisterType::Ip => self.set_ip(Address::new(data as usize)),
+            RegisterType::Sp => self.set_sp(Address::new(data as usize)),
+            RegisterType::Flags => self.set_flags(Flags::from_bits_retain(data as u16)),
         }
     }
 

@@ -25,7 +25,6 @@ impl<'a> RinLexer<'a> {
                 while self.base.peek(0).is_some_and(|e| e != '\n') {
                     self.base.consume();
                 }
-                self.base.consume();
                 continue;
             }
             if self.base.peek_match("->") {

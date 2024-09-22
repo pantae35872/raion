@@ -119,16 +119,21 @@ pub fn mov(args: &mut InstructionArgument) -> Result<(), super::InstructionError
             args.memory.mem_sets(address, &num.to_le_bytes())?;
         }
         MOV_NUM2DEREF_REG_WITH_OFFSET => {
-            args.deref_offset_set(|args| Ok(args.argument.parse_u64()?.to_le_bytes()))?;
+            args.deref_offset_set(|args| Ok((args.argument.parse_u64()?.to_le_bytes(), 8)))?;
         }
         MOV_REG2DEREF_REG_WITH_OFFSET => {
             args.deref_offset_set(|args| {
                 let reg = args.argument.parse_register()?;
                 let value = match reg {
-                    RegisterType::SP => args.register.get_sp().get_raw() as u64,
+                    RegisterType::Sp => args.register.get_sp().get_raw() as u64,
                     _ => args.register.get_general(&reg)?,
                 };
-                Ok(value.to_le_bytes())
+                match reg.size() {
+                    RegisterSizes::SizeU64 => Ok((value.to_le_bytes(), 8)),
+                    RegisterSizes::SizeU32 => Ok((value.to_le_bytes(), 4)),
+                    RegisterSizes::SizeU16 => Ok((value.to_le_bytes(), 2)),
+                    RegisterSizes::SizeU8 => Ok((value.to_le_bytes(), 1)),
+                }
             })?;
         }
         MOV_DEREF_REG_WITH_OFFSET2REG => {
@@ -143,7 +148,7 @@ pub fn mov(args: &mut InstructionArgument) -> Result<(), super::InstructionError
         }
         MOV_SECTION_ADDR2DEREF_REG_WITH_OFFSET => {
             args.deref_offset_set(|args| {
-                Ok(args.parse_section()?.mem_start().get_raw().to_le_bytes())
+                Ok((args.parse_section()?.mem_start().get_raw().to_le_bytes(), 8))
             })?;
         }
         invalid_subop_code => {

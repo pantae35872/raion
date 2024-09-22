@@ -2,10 +2,11 @@ use std::{fmt::Display, str::FromStr};
 
 use common::{
     constants::{
-        ADD_OPCODE, ARG_OPCODE, CALL_OPCODE, CMP_OPCODE, ENTER_OPCODE, EXIT_OPCODE, HALT_OPCODE,
-        INC_OPCODE, JACC_OPCODE, JACE_OPCODE, JACN_OPCODE, JACZ_OPCODE, JMC_OPCODE, JME_OPCODE,
-        JMN_OPCODE, JMP_OPCODE, JMZ_OPCODE, LARG_OPCODE, LEAVE_OPCODE, MOV_OPCODE, OUTC_OPCODE,
-        POP_OPCODE, PUSH_OPCODE, RESTR_OPCODE, RET_OPCODE, SAVR_OPCODE, SUB_OPCODE,
+        ADD_OPCODE, ARG_OPCODE, CALL_OPCODE, CMP_OPCODE, DIV_OPCODE, ENTER_OPCODE, EXIT_OPCODE,
+        HALT_OPCODE, INC_OPCODE, JACC_OPCODE, JACE_OPCODE, JACN_OPCODE, JACZ_OPCODE, JMC_OPCODE,
+        JME_OPCODE, JMN_OPCODE, JMP_OPCODE, JMZ_OPCODE, LARG_OPCODE, LEAVE_OPCODE, MOV_OPCODE,
+        MUL_OPCODE, OUTC_OPCODE, POP_OPCODE, PUSH_OPCODE, RESTR_OPCODE, RET_OPCODE, SAVR_OPCODE,
+        SUB_OPCODE,
     },
     register::RegisterType,
 };
@@ -41,6 +42,8 @@ pub enum InstructionType {
     Savr,
     Restr,
     Exit,
+    Mul,
+    Div,
 }
 
 impl InstructionType {
@@ -73,6 +76,8 @@ impl InstructionType {
             Self::Savr => return SAVR_OPCODE,
             Self::Restr => return RESTR_OPCODE,
             Self::Exit => return EXIT_OPCODE,
+            Self::Mul => return MUL_OPCODE,
+            Self::Div => return DIV_OPCODE,
         }
     }
 }
@@ -83,36 +88,38 @@ impl FromStr for InstructionType {
     type Err = FailToParseFromString;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "mov" => return Ok(Self::Mov),
-            "add" => return Ok(Self::Add),
-            "sub" => return Ok(Self::Sub),
-            "inc" => return Ok(Self::Inc),
-            "push" => return Ok(Self::Push),
-            "pop" => return Ok(Self::Pop),
-            "cmp" => return Ok(Self::Cmp),
-            "jmp" => return Ok(Self::Jmp),
-            "jmn" => return Ok(Self::Jmn),
-            "jme" => return Ok(Self::Jme),
-            "jmz" => return Ok(Self::Jmz),
-            "jmc" => return Ok(Self::Jmz),
-            "jacc" => return Ok(Self::Jacc),
-            "jace" => return Ok(Self::Jace),
-            "jacn" => return Ok(Self::Jacn),
-            "jacz" => return Ok(Self::Jacz),
-            "call" => return Ok(Self::Call),
-            "ret" => return Ok(Self::Ret),
-            "outc" => return Ok(Self::Outc),
-            "halt" => return Ok(Self::Halt),
-            "enter" => return Ok(Self::Enter),
-            "leave" => return Ok(Self::Leave),
-            "arg" => return Ok(Self::Arg),
-            "larg" => return Ok(Self::LArg),
-            "savr" => return Ok(Self::Savr),
-            "restr" => return Ok(Self::Restr),
-            "exit" => return Ok(Self::Exit),
-            _ => return Err(FailToParseFromString),
-        }
+        return match s {
+            "mov" => Ok(Self::Mov),
+            "add" => Ok(Self::Add),
+            "sub" => Ok(Self::Sub),
+            "inc" => Ok(Self::Inc),
+            "push" => Ok(Self::Push),
+            "pop" => Ok(Self::Pop),
+            "cmp" => Ok(Self::Cmp),
+            "jmp" => Ok(Self::Jmp),
+            "jmn" => Ok(Self::Jmn),
+            "jme" => Ok(Self::Jme),
+            "jmz" => Ok(Self::Jmz),
+            "jmc" => Ok(Self::Jmz),
+            "jacc" => Ok(Self::Jacc),
+            "jace" => Ok(Self::Jace),
+            "jacn" => Ok(Self::Jacn),
+            "jacz" => Ok(Self::Jacz),
+            "call" => Ok(Self::Call),
+            "ret" => Ok(Self::Ret),
+            "outc" => Ok(Self::Outc),
+            "halt" => Ok(Self::Halt),
+            "enter" => Ok(Self::Enter),
+            "leave" => Ok(Self::Leave),
+            "arg" => Ok(Self::Arg),
+            "larg" => Ok(Self::LArg),
+            "savr" => Ok(Self::Savr),
+            "restr" => Ok(Self::Restr),
+            "exit" => Ok(Self::Exit),
+            "mul" => Ok(Self::Mul),
+            "div" => Ok(Self::Div),
+            _ => Err(FailToParseFromString),
+        };
     }
 }
 
@@ -146,6 +153,8 @@ impl Display for InstructionType {
             Self::Savr => write!(f, "savr"),
             Self::Restr => write!(f, "restr"),
             Self::Exit => write!(f, "exit"),
+            Self::Mul => write!(f, "mul"),
+            Self::Div => write!(f, "div"),
         }
     }
 }
@@ -173,7 +182,7 @@ impl ASMToken {
     pub fn is_register_and_general(&self) -> bool {
         match self {
             Self::Register(reg) => match reg {
-                RegisterType::SP | RegisterType::IP => return false,
+                RegisterType::Sp | RegisterType::Ip => return false,
                 _ => return true,
             },
             _ => return false,

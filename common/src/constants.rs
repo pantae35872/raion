@@ -14,6 +14,8 @@ pub const INC_OPCODE: u16 = 30;
 pub const CMP_OPCODE: u16 = 31;
 pub const ADD_OPCODE: u16 = 32;
 pub const SUB_OPCODE: u16 = 33;
+pub const MUL_OPCODE: u16 = 34;
+pub const DIV_OPCODE: u16 = 35;
 
 //Branching instructions
 pub const JMP_OPCODE: u16 = 64;

@@ -21,6 +21,8 @@ pub enum Keyword {
     Module,
     Procedure,
     Return,
+    True,
+    False,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,7 +40,7 @@ pub enum RinToken {
     Type(PrimitiveType),
     Keyword(Keyword),
     Operator(Operator),
-    Interger(u64),
+    Interger(i64),
     Dot,
     Comma,
     Equals,
@@ -58,7 +60,7 @@ impl Token for RinToken {
     }
 
     fn from_u64(num: u64) -> Self {
-        Self::Interger(num)
+        Self::Interger(num as i64)
     }
 
     fn from_string(string: String) -> Self {
@@ -117,6 +119,8 @@ impl Display for Keyword {
             Self::Return => write!(f, "return"),
             Self::Module => write!(f, "module"),
             Self::Procedure => write!(f, "procedure"),
+            Self::True => write!(f, "true"),
+            Self::False => write!(f, "false"),
         }
     }
 }
@@ -164,13 +168,15 @@ impl FromStr for Keyword {
     type Err = InvalidKeyword;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        return match s {
             "import" => Ok(Self::Import),
             "module" => Ok(Self::Module),
             "return" => Ok(Self::Return),
             "proc" => Ok(Self::Procedure),
+            "true" => Ok(Self::True),
+            "false" => Ok(Self::False),
             _ => Err(InvalidKeyword),
-        }
+        };
     }
 }
 

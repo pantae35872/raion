@@ -141,7 +141,7 @@ impl<'a> ArgumentParser<'a> {
                     value
                 }
                 ArgumentType::RegisterSp => self.match_token(self.current_offset, |e| {
-                    matches!(e, ASMToken::Register(RegisterType::SP))
+                    matches!(e, ASMToken::Register(RegisterType::Sp))
                 }),
             };
 

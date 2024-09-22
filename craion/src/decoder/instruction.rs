@@ -35,6 +35,7 @@ mod add;
 mod arg;
 mod call;
 mod cmp;
+mod div;
 mod enter;
 mod exit;
 mod halt;
@@ -51,6 +52,7 @@ mod jmz;
 mod larg;
 mod leave;
 mod mov;
+mod mul;
 mod outc;
 mod pop;
 mod push;
@@ -180,19 +182,19 @@ impl<'a> InstructionArgument<'a> {
     /// Parse the argument and set the value based on the return value of the closure
     pub fn deref_offset_set<const T: usize>(
         &mut self,
-        value: impl FnOnce(&mut InstructionArgument) -> Result<[u8; T], InstructionError>,
+        value: impl FnOnce(&mut InstructionArgument) -> Result<([u8; T], usize), InstructionError>,
     ) -> Result<(), InstructionError> {
         let reg = self.argument.parse_register()?;
         let offset = self.argument.parse_u32()? as usize;
         let is_add = self.argument.parse_boolean()?;
-        let value = value(self)?;
+        let (value, size) = value(self)?;
         let address = match reg {
-            RegisterType::SP => self.register.get_sp(),
+            RegisterType::Sp => self.register.get_sp(),
             _ => self.register.get_general(&reg)?.into(),
         };
         self.memory.mem_sets(
             inline_if!(is_add, address + offset, address - offset),
-            &value,
+            &value[0..size],
         )?;
         return Ok(());
     }
@@ -203,7 +205,7 @@ impl<'a> InstructionArgument<'a> {
         let offset = self.argument.parse_u32()? as usize;
         let is_add = self.argument.parse_boolean()?;
         let address = match reg {
-            RegisterType::SP => self.register.get_sp(),
+            RegisterType::Sp => self.register.get_sp(),
             _ => self.register.get_general(&reg)?.into(),
         };
 

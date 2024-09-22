@@ -26,8 +26,6 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let ast = compiler.program();
-    println!("{ast:?}");
     let generated_asm = match compiler.generate() {
         Ok(res) => res,
         Err(err) => {

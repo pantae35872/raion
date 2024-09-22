@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use generator::{Generator, GeneratorError};
 
 use crate::token::rin_token::{Keyword, Operator, PrimitiveType, RinToken};
@@ -42,8 +44,8 @@ struct Parameter {
     name: String,
 }
 
-#[derive(Debug, Clone)]
-enum Type {
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+pub enum Type {
     U64,
     U32,
     U16,
@@ -53,7 +55,16 @@ enum Type {
     I32,
     I64,
     Bool,
+    Void,
     //Struct(String)
+}
+
+pub enum TypeSizes {
+    SizeVoid,
+    SizeU8,
+    SizeU16,
+    SizeU32,
+    SizeU64,
 }
 
 #[derive(Debug)]
@@ -79,15 +90,19 @@ enum Expression {
 
 #[derive(Debug)]
 enum Term {
-    Literial(Literal),
+    Literal(Literal),
     ProcedureCall(Path, Vec<Expression>),
     LocalVariableAccess(String),
 }
 
 #[derive(Debug)]
 enum Literal {
-    Interger(u64),
+    U64(u64),
+    U32(u32),
+    U16(u16),
+    U8(u8),
     String(String),
+    Boolean(bool),
 }
 
 #[derive(Debug)]
@@ -98,8 +113,8 @@ enum BinaryOperator {
     Divide,
 }
 
-#[derive(Debug)]
-struct Path {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Path {
     path: Vec<String>,
 }
 
@@ -230,10 +245,19 @@ impl RinCompiler {
                 })
             }
             RinToken::Identifier(_) => {
-                let name = self.parse_identifier()?;
-                self.base.expect_token(RinToken::Equals)?;
-                let value = self.parse_expression(0)?;
-                Ok(Statement::VariableMutate { name, value })
+                if self
+                    .base
+                    .peek(1)
+                    .is_some_and(|e| *e == RinToken::Dot || *e == RinToken::LRoundBracket)
+                {
+                    let expr = self.parse_expression(0)?;
+                    Ok(Statement::Expression(expr))
+                } else {
+                    let name = self.parse_identifier()?;
+                    self.base.expect_token(RinToken::Equals)?;
+                    let value = self.parse_expression(0)?;
+                    Ok(Statement::VariableMutate { name, value })
+                }
             }
             RinToken::Keyword(keyword) => match keyword {
                 Keyword::Return => {
@@ -319,12 +343,43 @@ impl RinCompiler {
         {
             RinToken::Interger(interger) => {
                 self.base.consume();
-                Ok(Term::Literial(Literal::Interger(interger)))
+                let value = match self.base.peek(0).ok_or(CompilerError::UnexpectedToken(
+                    None,
+                    self.base.current_line(),
+                ))? {
+                    RinToken::Type(typ) => match typ {
+                        PrimitiveType::U64 => Ok(Term::Literal(Literal::U64(interger as u64))),
+                        PrimitiveType::U32 => Ok(Term::Literal(Literal::U32(interger as u32))),
+                        PrimitiveType::U16 => Ok(Term::Literal(Literal::U16(interger as u16))),
+                        PrimitiveType::U8 => Ok(Term::Literal(Literal::U8(interger as u8))),
+                        _ => todo!(),
+                    },
+                    unexpected => Err(CompilerError::UnexpectedToken(
+                        Some(unexpected.clone()),
+                        self.base.current_line(),
+                    )),
+                };
+                self.base.consume();
+                value
             }
             RinToken::String(string) => {
                 self.base.consume();
-                Ok(Term::Literial(Literal::String(string)))
+                Ok(Term::Literal(Literal::String(string)))
             }
+            RinToken::Keyword(keyword) => match keyword {
+                Keyword::True => {
+                    self.base.consume();
+                    Ok(Term::Literal(Literal::Boolean(true)))
+                }
+                Keyword::False => {
+                    self.base.consume();
+                    Ok(Term::Literal(Literal::Boolean(false)))
+                }
+                unexpected => Err(CompilerError::UnexpectedToken(
+                    Some(RinToken::Keyword(unexpected)),
+                    self.base.current_line(),
+                )),
+            },
             RinToken::Identifier(ident) => {
                 if self.base.peek(1).is_some_and(|e| {
                     matches!(e, RinToken::LRoundBracket) || matches!(e, RinToken::Dot)
@@ -471,9 +526,50 @@ impl RinCompiler {
     }
 }
 
-impl Path {
-    pub fn to_string(&self) -> String {
-        self.path.join("$")
+impl Display for Path {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.path.join("$"))
+    }
+}
+
+impl Type {
+    fn size(&self) -> TypeSizes {
+        match self {
+            Self::U64 | Self::I64 => TypeSizes::SizeU64,
+            Self::U32 | Self::I32 => TypeSizes::SizeU32,
+            Self::U16 | Self::I16 => TypeSizes::SizeU16,
+            Self::U8 | Self::I8 | Self::Bool => TypeSizes::SizeU8,
+            Self::Void => TypeSizes::SizeVoid,
+        }
+    }
+}
+
+impl TypeSizes {
+    pub fn byte(&self) -> usize {
+        return match self {
+            TypeSizes::SizeU8 => 1,
+            TypeSizes::SizeU16 => 2,
+            TypeSizes::SizeU32 => 4,
+            TypeSizes::SizeU64 => 8,
+            TypeSizes::SizeVoid => 0,
+        };
+    }
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::U64 => write!(f, "u64"),
+            Self::U32 => write!(f, "u32"),
+            Self::U16 => write!(f, "u16"),
+            Self::U8 => write!(f, "u8"),
+            Self::I8 => write!(f, "i8"),
+            Self::I16 => write!(f, "i16"),
+            Self::I32 => write!(f, "i32"),
+            Self::I64 => write!(f, "i64"),
+            Self::Void => write!(f, "void"),
+            Self::Bool => write!(f, "bool"),
+        }
     }
 }
 
