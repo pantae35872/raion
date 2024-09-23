@@ -221,13 +221,6 @@ impl Display for ASMToken {
 }
 
 impl Token for ASMToken {
-    fn is_newline(&self) -> bool {
-        match self {
-            Self::NewLine => return true,
-            _ => return false,
-        }
-    }
-
     fn from_string(string: String) -> Self {
         Self::String(string)
     }

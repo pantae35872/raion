@@ -58,6 +58,7 @@ proc part1(): u32 -> {
   u32 c = 3u32;
   u32 d = 4u32;
   u32 e = 5u32;
+  u32 e = u32;
   return sum(a, b, c, d, e);
 }
 

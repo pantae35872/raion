@@ -14,7 +14,7 @@ use craion::memory::address::Address;
 extern crate test;
 
 fn main() -> ExitCode {
-    let mut executor = Executor::new(0xFFFF);
+    let mut executor = Executor::new(0xFFFFF);
     let args: Vec<String> = env::args().collect();
     let mut sin = File::open(args.get(1).expect("Provied sin file to be execute"))
         .expect("The sin file does not exists");

@@ -51,14 +51,9 @@ pub enum RinToken {
     RRoundBracket,
     Colon,
     Arrow,
-    NewLine,
 }
 
 impl Token for RinToken {
-    fn is_newline(&self) -> bool {
-        matches!(self, RinToken::NewLine)
-    }
-
     fn from_u64(num: u64) -> Self {
         Self::Interger(num as i64)
     }
@@ -96,7 +91,6 @@ impl Display for RinToken {
             Self::Comma => write!(f, "Comma token"),
             Self::Colon => write!(f, "Colon token"),
             Self::Arrow => write!(f, "Arrow token"),
-            Self::NewLine => write!(f, "new line token"),
         }
     }
 }

@@ -1,16 +1,9 @@
 use std::{collections::HashMap, error::Error, fmt::Display};
 
-use block_generator::BlockGenerator;
-use common::{
-    inline_if,
-    register::{RegisterType, RegisterTypeGroup},
-    VecUtils,
-};
+use block_generator::{BlockGenerator, ReturnDestion};
+use common::{register::RegisterType, VecUtils};
 
-use super::{
-    BinaryOperator, Block, Expression, Literal, Parameter, Path, Procedure, RinAst, Statement,
-    Term, Type,
-};
+use super::{Parameter, Path, Procedure, RinAst, Type};
 
 mod block_generator;
 
@@ -51,7 +44,6 @@ struct ProcGenerator<'a> {
     variables: Variables,
     body: String,
     constants: String,
-    const_count: usize,
     callable_procs: &'a Vec<ProcHeader>,
 }
 
@@ -119,7 +111,6 @@ impl<'a> ProcGenerator<'a> {
             body: String::new(),
             constants: String::new(),
             callable_procs,
-            const_count: 0,
         }
     }
 
@@ -131,7 +122,7 @@ impl<'a> ProcGenerator<'a> {
         self.gen_argument(&proc.parameters);
         let (return_type, generated) =
             BlockGenerator::new(&self.variables, &mut self.stack_loc, &self.callable_procs)
-                .gen_block(&proc.body)?;
+                .gen_block(&proc.body, ReturnDestion::LeaveReturn)?;
         self.body.push_str(&generated);
         self.body.push_str("}\n");
         self.body.push_str(&self.constants);
@@ -166,15 +157,5 @@ impl<'a> ProcGenerator<'a> {
 
     fn add_instruction<T: AsRef<str> + Display>(&mut self, value: T) {
         self.body.push_str(&format!("   {value}\n"));
-    }
-
-    fn add_str_const<T: AsRef<str> + Display>(&mut self, value: T) -> String {
-        self.constants.push_str(&format!(
-            "const const_{} -> {{\n\"{value}\\0\"\n}}\n",
-            self.const_count
-        ));
-        let result = format!("const_{}", self.const_count);
-        self.const_count += 1;
-        return result;
     }
 }

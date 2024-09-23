@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, hash::Hash};
+use std::fmt::Display;
 
 use common::{
     inline_if,
@@ -19,6 +19,12 @@ pub struct BlockGenerator<'a> {
     callable_procs: &'a Vec<ProcHeader>,
 }
 
+pub enum ReturnDestion {
+    Register(RegisterType),
+    LeaveReturn,
+    Return,
+}
+
 impl<'a> BlockGenerator<'a> {
     pub fn new(
         variables: &'a Variables,
@@ -34,10 +40,14 @@ impl<'a> BlockGenerator<'a> {
         }
     }
 
-    pub fn gen_block<'b>(mut self, block: &'b Block) -> Result<(Type, String), GeneratorError<'b>> {
+    pub fn gen_block<'b>(
+        mut self,
+        block: &'b Block,
+        return_dst: ReturnDestion,
+    ) -> Result<(Type, String), GeneratorError<'b>> {
         let mut return_type = Type::Void;
         for statement in block.body.iter() {
-            if let Some(stmt_type) = self.gen_statement(statement)? {
+            if let Some(stmt_type) = self.gen_statement(statement, &return_dst)? {
                 if return_type != Type::Void && return_type != stmt_type {
                     return Err(GeneratorError::UnexpectedType {
                         expected: return_type,
@@ -53,6 +63,7 @@ impl<'a> BlockGenerator<'a> {
     fn gen_statement<'b>(
         &mut self,
         statement: &'b Statement,
+        return_type: &ReturnDestion,
     ) -> Result<Option<Type>, GeneratorError<'b>> {
         match statement {
             Statement::VariableDecl {
@@ -87,14 +98,33 @@ impl<'a> BlockGenerator<'a> {
                 self.add_instruction(format!("mov [sp + {stack_loc}], a{bits}"));
             }
             Statement::Return(expr) => {
-                let typ = self.gen_expression(
-                    expr,
-                    ExpressionDestination::Register(RegisterType::A64),
-                    &[],
-                )?;
-                self.add_instruction("leave");
-                self.add_instruction("ret");
-                return Ok(Some(typ));
+                let return_type = match return_type {
+                    ReturnDestion::Register(reg) => {
+                        let typ =
+                            self.gen_expression(expr, ExpressionDestination::Register(*reg), &[])?;
+                        typ
+                    }
+                    ReturnDestion::Return => {
+                        let typ = self.gen_expression(
+                            expr,
+                            ExpressionDestination::Register(RegisterType::A64),
+                            &[],
+                        )?;
+                        self.add_instruction("ret");
+                        typ
+                    }
+                    ReturnDestion::LeaveReturn => {
+                        let typ = self.gen_expression(
+                            expr,
+                            ExpressionDestination::Register(RegisterType::A64),
+                            &[],
+                        )?;
+                        self.add_instruction("leave");
+                        self.add_instruction("ret");
+                        typ
+                    }
+                };
+                return Ok(Some(return_type));
             }
             Statement::Expression(expression) => {
                 self.gen_expression(expression, ExpressionDestination::Ignored, &[])?;
@@ -231,7 +261,7 @@ impl<'a> BlockGenerator<'a> {
         preserved_registers: &[RegisterTypeGroup],
     ) -> Result<Type, GeneratorError<'b>> {
         let typ = match literal {
-            Literal::String(value) => todo!(),
+            Literal::String(_value) => todo!(),
             Literal::U64(value) => {
                 self.preserve_registers(preserved_registers, &[RegisterTypeGroup::A]);
                 self.add_instruction(format!("mov a64, {value}"));
@@ -302,6 +332,7 @@ impl<'a> BlockGenerator<'a> {
             .iter()
             .find(|e| e.callable_path == *path)
             .ok_or(GeneratorError::UndefinedProcedure(path))?;
+        // TODO: Check for parameter length
         for (i, (expr, param_type)) in args.iter().zip(proc.parameters.iter()).enumerate() {
             let expr_type = self.gen_expression(
                 expr,

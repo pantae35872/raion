@@ -14,37 +14,36 @@ use raion::{
     lexer::{asm_lexer::ASMLexer, rin_lexer::RinLexer},
 };
 
+use inline_colorization::*;
+
 fn main() -> ExitCode {
     let mut file = File::open("in.rin").expect("file not found");
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
-    let lexer = RinLexer::new(&data);
+    let lexer = RinLexer::new(&data, Path::new("in.rin"));
     let tokens = lexer.tokenize().expect("Failed to tokenize rin");
     let mut compiler = RinCompiler::new(tokens, RinPath::new("main"));
     match compiler.parse() {
         Ok(_) => {}
         Err(err) => {
-            eprintln!("Compilation error");
-            eprintln!("{}", err);
+            eprintln!("{style_bold}{color_red}error{color_reset}{style_reset}: {err}");
             return ExitCode::FAILURE;
         }
     };
     let generated_asm = match compiler.generate() {
         Ok(res) => res,
         Err(err) => {
-            eprintln!("Code generation error");
-            eprintln!("{err}");
+            eprintln!("{style_bold}{color_red}error{color_reset}{style_reset}: {err}");
             return ExitCode::FAILURE;
         }
     };
-    println!("Generated:\n{generated_asm}");
 
     if Path::new("out.asm").exists() {
         fs::remove_file("out.asm").unwrap();
     }
     let mut file = File::create("out.asm").expect("UNNN");
     write!(file, "{generated_asm}").unwrap();
-    let lexer = ASMLexer::new(&generated_asm);
+    let lexer = ASMLexer::new(&generated_asm, Path::new("in.rin"));
     let tokens = lexer.tokenize().expect("Cannot parse");
     let compiler = ASMCompiler::new(tokens);
     match compiler.compile() {

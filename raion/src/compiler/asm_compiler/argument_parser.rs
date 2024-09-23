@@ -1,7 +1,7 @@
 use common::{inline_if, register::RegisterType};
 use xxhash_rust::xxh3::xxh3_64;
 
-use crate::{compiler::CompilerBase, token::asm_token::ASMToken};
+use crate::{compiler::CompilerBase, token::asm_token::ASMToken, Location};
 
 use super::LabelReplace;
 
@@ -36,19 +36,18 @@ pub struct ArgumentParser<'a> {
 #[derive(Default)]
 pub struct ParsedArguments {
     arguments: Vec<ParsedArgument>,
-    line: usize,
 }
 
 impl ParsedArguments {
-    fn new(arguments: Vec<ParsedArgument>, line: usize) -> Self {
-        Self { arguments, line }
+    fn new(arguments: Vec<ParsedArgument>) -> Self {
+        Self { arguments }
     }
 
     pub fn insert(&mut self, index: usize, buffer: Vec<u8>) {
         self.arguments.insert(index, ParsedArgument::Buffer(buffer));
     }
 
-    pub fn finalize(self) -> (Vec<u8>, Vec<LabelReplace>) {
+    pub fn finalize(self, location: Location) -> (Vec<u8>, Vec<LabelReplace>) {
         let mut label_replaces = Vec::new();
         let mut buffer = Vec::new();
 
@@ -63,7 +62,7 @@ impl ParsedArguments {
                     label_replaces.push(LabelReplace {
                         label,
                         pos: buffer.len(),
-                        line: self.line,
+                        location: location.clone(),
                     });
                     buffer.extend_from_slice(&0u64.to_le_bytes())
                 }
@@ -93,7 +92,9 @@ impl<'a> ArgumentParser<'a> {
     }
 
     fn match_token(&self, offset: usize, expected: impl Fn(&ASMToken) -> bool) -> bool {
-        self.compiler.peek(offset).is_some_and(expected)
+        self.compiler
+            .peek(offset)
+            .is_some_and(|e| expected(e.value()))
     }
 
     fn match_token_sequence(&self, expected: &[for<'b> fn(&'b ASMToken) -> bool]) -> bool {
@@ -170,62 +171,66 @@ impl<'a> ArgumentParser<'a> {
         for (i, argument) in self.arguments_parse.iter().enumerate() {
             match argument {
                 ArgumentType::Register | ArgumentType::RegisterSp => {
-                    let register = match self.compiler.peek(self.current_offset).unwrap() {
+                    let register = match self.compiler.peek(self.current_offset).unwrap().value() {
                         ASMToken::Register(register) => register,
                         _ => unreachable!(),
                     };
                     arguments.push(ParsedArgument::Register(register.clone()));
                 }
                 ArgumentType::U64 => {
-                    let number = match self.compiler.peek(self.current_offset).unwrap() {
+                    let number = match self.compiler.peek(self.current_offset).unwrap().value() {
                         ASMToken::Interger(number) => number,
                         _ => unreachable!(),
                     };
                     arguments.push(ParsedArgument::U64(*number));
                 }
                 ArgumentType::U32 => {
-                    let number = match self.compiler.peek(self.current_offset).unwrap() {
+                    let number = match self.compiler.peek(self.current_offset).unwrap().value() {
                         ASMToken::Interger(number) => number,
                         _ => unreachable!(),
                     };
                     arguments.push(ParsedArgument::U32(*number as u32));
                 }
                 ArgumentType::Section => {
-                    let ident = match self.compiler.peek(self.current_offset).unwrap() {
+                    let ident = match self.compiler.peek(self.current_offset).unwrap().value() {
                         ASMToken::Identifier(ident) => ident,
                         _ => unreachable!(),
                     };
                     arguments.push(ParsedArgument::Section(xxh3_64(ident.as_bytes())));
                 }
                 ArgumentType::Label => {
-                    let ident = match self.compiler.peek(self.current_offset).unwrap() {
+                    let ident = match self.compiler.peek(self.current_offset).unwrap().value() {
                         ASMToken::Identifier(ident) => ident,
                         _ => unreachable!(),
                     };
                     arguments.push(ParsedArgument::Label(ident.clone()));
                 }
                 ArgumentType::DerefRegister => {
-                    let register = match self.compiler.peek(self.current_offset + 1).unwrap() {
-                        ASMToken::Register(register) => register,
-                        _ => unreachable!(),
-                    };
+                    let register =
+                        match self.compiler.peek(self.current_offset + 1).unwrap().value() {
+                            ASMToken::Register(register) => register,
+                            _ => unreachable!(),
+                        };
                     arguments.push(ParsedArgument::Register(register.clone()));
 
                     self.current_offset += 2;
                 }
                 ArgumentType::DerefRegisterOffset => {
-                    let register = match self.compiler.peek(self.current_offset + 1).unwrap() {
-                        ASMToken::Register(register) => register,
-                        _ => unreachable!(),
-                    };
-                    let offset = match self.compiler.peek(self.current_offset + 3).unwrap() {
+                    let register =
+                        match self.compiler.peek(self.current_offset + 1).unwrap().value() {
+                            ASMToken::Register(register) => register,
+                            _ => unreachable!(),
+                        };
+                    let offset = match self.compiler.peek(self.current_offset + 3).unwrap().value()
+                    {
                         ASMToken::Interger(offset) => offset,
                         _ => unreachable!(),
                     };
 
                     arguments.push(ParsedArgument::Register(register.clone()));
                     arguments.push(ParsedArgument::U32(*offset as u32));
-                    let is_add = match self.compiler.peek(self.current_offset + 2).unwrap() {
+                    let is_add = match self.compiler.peek(self.current_offset + 2).unwrap().value()
+                    {
                         ASMToken::Plus => true,
                         ASMToken::Minus => false,
                         _ => unreachable!(),
@@ -240,6 +245,6 @@ impl<'a> ArgumentParser<'a> {
                 self.current_offset -= 1;
             }
         }
-        return ParsedArguments::new(arguments, self.compiler.current_line());
+        return ParsedArguments::new(arguments);
     }
 }

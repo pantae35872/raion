@@ -13,7 +13,10 @@ use common::{
 };
 use xxhash_rust::xxh3::xxh3_64;
 
-use crate::token::asm_token::{ASMToken, InstructionType};
+use crate::{
+    token::asm_token::{ASMToken, InstructionType},
+    Location, WithLocation,
+};
 
 use super::{CompilerBase, CompilerError};
 
@@ -23,7 +26,7 @@ mod argument_parser;
 pub struct LabelReplace {
     label: String,
     pos: usize,
-    line: usize,
+    location: Location,
 }
 
 pub struct ASMCompiler {
@@ -34,7 +37,7 @@ pub struct ASMCompiler {
 }
 
 impl ASMCompiler {
-    pub fn new(tokens: Vec<ASMToken>) -> Self {
+    pub fn new(tokens: Vec<WithLocation<ASMToken>>) -> Self {
         Self {
             base: CompilerBase::new(tokens),
             data: Vec::new(),
@@ -67,7 +70,7 @@ impl ASMCompiler {
                     .get(&label_replace.label)
                     .ok_or(CompilerError::UndefinedLabel(
                         label_replace.label.clone(),
-                        label_replace.line,
+                        label_replace.location.clone(),
                     ))?;
             data.copy_from_slice(&(*label_data as u64).to_le_bytes());
         }
@@ -88,7 +91,7 @@ impl ASMCompiler {
 
     fn consume_until_newline(&mut self) {
         while let Some(token) = self.base.peek(0) {
-            if matches!(token, ASMToken::NewLine) {
+            if matches!(token.value(), ASMToken::NewLine) {
                 break;
             } else {
                 self.base.consume();
@@ -106,16 +109,22 @@ impl ASMCompiler {
         let mut label_replacess = Vec::new();
         while let Some(token) = self.base.peek(0).cloned() {
             match token {
-                ASMToken::Label(label) => {
+                WithLocation {
+                    value: ASMToken::Label(label),
+                    location,
+                } => {
                     if let Err(err) = labels.try_insert(label, self.write_pos - start) {
                         return Err(CompilerError::MultipleLabel(
                             err.entry.key().clone(),
-                            self.base.current_line(),
+                            location,
                         ));
                     }
                     self.base.consume();
                 }
-                ASMToken::Instruction(instruction) => {
+                WithLocation {
+                    value: ASMToken::Instruction(instruction),
+                    location,
+                } => {
                     self.base.consume();
                     let (argument, mut label_replaces) = match instruction {
                         InstructionType::Mov => {
@@ -188,13 +197,13 @@ impl ASMCompiler {
                                         ArgumentType::Section,
                                     ])
                                 })
-                                .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
+                                .ok_or(CompilerError::InvalidArgument(location.clone()))?;
                             args.insert(0, vec![subopcode]);
                             args
                         }
                         InstructionType::Cmp | InstructionType::Mul | InstructionType::Div => self
                             .try_parse_argument(&[ArgumentType::Register, ArgumentType::Register])
-                            .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
+                            .ok_or(CompilerError::InvalidArgument(location.clone()))?,
                         InstructionType::Add => {
                             let mut subopcode = ADD_REG_W_REG;
                             let mut args = self
@@ -216,7 +225,7 @@ impl ASMCompiler {
                                         ArgumentType::U64,
                                     ])
                                 })
-                                .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
+                                .ok_or(CompilerError::InvalidArgument(location.clone()))?;
                             args.insert(0, vec![subopcode]);
                             args
                         }
@@ -241,7 +250,7 @@ impl ASMCompiler {
                                         ArgumentType::U64,
                                     ])
                                 })
-                                .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
+                                .ok_or(CompilerError::InvalidArgument(location.clone()))?;
                             args.insert(0, vec![subopcode]);
                             args
                         }
@@ -253,7 +262,7 @@ impl ASMCompiler {
                         | InstructionType::Restr
                         | InstructionType::Exit => self
                             .try_parse_argument(&[ArgumentType::Register])
-                            .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
+                            .ok_or(CompilerError::InvalidArgument(location.clone()))?,
                         InstructionType::Jmp
                         | InstructionType::Jmc
                         | InstructionType::Jmz
@@ -261,13 +270,13 @@ impl ASMCompiler {
                         | InstructionType::Jmn => {
                             let mut args = self
                                 .try_parse_argument(&[ArgumentType::Label])
-                                .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
+                                .ok_or(CompilerError::InvalidArgument(location.clone()))?;
                             args.insert(0, procedure_hash.to_le_bytes().to_vec());
                             args
                         }
                         InstructionType::Call => self
                             .try_parse_argument(&[ArgumentType::Section])
-                            .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
+                            .ok_or(CompilerError::InvalidArgument(location.clone()))?,
                         InstructionType::Jacn
                         | InstructionType::Jacc
                         | InstructionType::Jace
@@ -278,13 +287,13 @@ impl ASMCompiler {
                                     ArgumentType::Register,
                                     ArgumentType::Label,
                                 ])
-                                .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
+                                .ok_or(CompilerError::InvalidArgument(location.clone()))?;
                             args.insert(2, procedure_hash.to_le_bytes().to_vec());
                             args
                         }
                         InstructionType::Enter => self
                             .try_parse_argument(&[ArgumentType::U64])
-                            .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
+                            .ok_or(CompilerError::InvalidArgument(location.clone()))?,
                         InstructionType::Arg => {
                             let mut subopcode = ARG_NUM;
                             let mut args = self
@@ -296,18 +305,18 @@ impl ASMCompiler {
                                         ArgumentType::Register,
                                     ])
                                 })
-                                .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?;
+                                .ok_or(CompilerError::InvalidArgument(location.clone()))?;
                             args.insert(0, vec![subopcode]);
                             args
                         }
                         InstructionType::LArg => self
                             .try_parse_argument(&[ArgumentType::Register, ArgumentType::U32])
-                            .ok_or(CompilerError::InvalidArgument(self.base.current_line()))?,
+                            .ok_or(CompilerError::InvalidArgument(location.clone()))?,
                         InstructionType::Ret | InstructionType::Leave | InstructionType::Halt => {
                             ParsedArguments::default()
                         }
                     }
-                    .finalize();
+                    .finalize(location);
                     self.write_instruction(instruction.opcode(), &argument);
 
                     // Replace the label using the real offset not argument offset
@@ -317,22 +326,26 @@ impl ASMCompiler {
                     label_replacess.extend_from_slice(&label_replaces);
                     self.consume_until_newline();
                 }
-                ASMToken::String(string) => {
+                WithLocation {
+                    value: ASMToken::String(string),
+                    ..
+                } => {
                     self.write(string.as_bytes());
                     self.base.consume();
                 }
-                ASMToken::NewLine => {
+                WithLocation {
+                    value: ASMToken::NewLine,
+                    ..
+                } => {
                     self.base.consume();
                 }
-                ASMToken::RCurly => {
+                WithLocation {
+                    value: ASMToken::RCurly,
+                    ..
+                } => {
                     break;
                 }
-                unexpected => {
-                    return Err(CompilerError::UnexpectedToken(
-                        Some(unexpected),
-                        self.base.current_line(),
-                    ))
-                }
+                unexpected => return Err(CompilerError::UnexpectedToken(Some(unexpected))),
             }
         }
         self.replace_labels(label_replacess, labels)?;
@@ -341,17 +354,16 @@ impl ASMCompiler {
     }
 
     pub fn parse_name(&mut self) -> Result<String, CompilerError<ASMToken>> {
-        let name = match self.base.peek(0).ok_or(CompilerError::UnexpectedToken(
-            None,
-            self.base.current_line(),
-        ))? {
-            ASMToken::Identifier(ident) => ident,
-            token => {
-                return Err(CompilerError::UnexpectedToken(
-                    Some(token.clone()),
-                    self.base.current_line(),
-                ))
-            }
+        let name = match self
+            .base
+            .peek(0)
+            .ok_or(CompilerError::UnexpectedToken(None))?
+        {
+            WithLocation {
+                value: ASMToken::Identifier(ident),
+                location: _,
+            } => ident,
+            token => return Err(CompilerError::UnexpectedToken(Some(token.clone()))),
         }
         .clone();
         self.base.consume();
@@ -361,7 +373,10 @@ impl ASMCompiler {
     pub fn compile(mut self) -> Result<(Vec<SinSection>, Vec<u8>), CompilerError<ASMToken>> {
         while let Some(token) = self.base.peek(0).cloned() {
             match token {
-                ASMToken::Identifier(ref ident) => match ident.as_str() {
+                WithLocation {
+                    value: ASMToken::Identifier(ref ident),
+                    ..
+                } => match ident.as_str() {
                     "proc" => {
                         self.base.consume();
                         let procedure_name = self.parse_name()?;
@@ -388,22 +403,15 @@ impl ASMCompiler {
                             end,
                         ));
                     }
-                    _ => {
-                        return Err(CompilerError::UnexpectedToken(
-                            Some(token),
-                            self.base.current_line(),
-                        ))
-                    }
+                    _ => return Err(CompilerError::UnexpectedToken(Some(token))),
                 },
-                ASMToken::NewLine => {
+                WithLocation {
+                    value: ASMToken::NewLine,
+                    ..
+                } => {
                     self.base.consume();
                 }
-                unexpected => {
-                    return Err(CompilerError::UnexpectedToken(
-                        Some(unexpected),
-                        self.base.current_line(),
-                    ))
-                }
+                unexpected => return Err(CompilerError::UnexpectedToken(Some(unexpected))),
             }
         }
         return Ok((self.sections, self.data));

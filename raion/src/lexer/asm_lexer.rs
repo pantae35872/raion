@@ -1,72 +1,71 @@
-use std::str::FromStr;
+use std::{path::Path, str::FromStr};
 
 use common::register::RegisterType;
 
-use crate::token::asm_token::{ASMToken, InstructionType};
+use crate::{
+    token::asm_token::{ASMToken, InstructionType},
+    WithLocation,
+};
 
 use super::{LexerBase, LexerError};
 
 pub struct ASMLexer<'a> {
-    base: LexerBase<'a>,
+    base: LexerBase<'a, ASMToken>,
 }
 
 impl<'a> ASMLexer<'a> {
-    pub fn new(buffer: &'a str) -> Self {
+    pub fn new(buffer: &'a str, file: &'a Path) -> Self {
         Self {
-            base: LexerBase::new(buffer),
+            base: LexerBase::new(buffer, file),
         }
     }
 
-    pub fn tokenize(mut self) -> Result<Vec<ASMToken>, LexerError> {
-        let mut tokens = Vec::new();
+    pub fn tokenize(mut self) -> Result<Vec<WithLocation<ASMToken>>, LexerError> {
         let mut buffer = String::new();
 
         while let Some(value) = self.base.peek(0) {
             if value.is_alphabetic() {
-                buffer.push(self.base.consume().unwrap());
-                while self
-                    .base
-                    .peek(0)
-                    .is_some_and(|e| e.is_alphanumeric() || e == '_' || e == '$')
-                {
-                    buffer.push(self.base.consume().unwrap());
-                }
+                self.base.consume_while(
+                    &mut buffer,
+                    |e| e.is_alphanumeric() || e == '_' || e == '$',
+                    |_| false,
+                );
 
                 if self.base.peek(0).is_some_and(|e| e == ':') {
                     self.base.consume();
-                    tokens.push(ASMToken::Label(buffer.clone()));
+                    self.base.push(ASMToken::Label(buffer.clone()));
                     buffer.clear();
                     continue;
                 }
 
                 if let Ok(instruction_type) = InstructionType::from_str(&buffer) {
-                    tokens.push(ASMToken::Instruction(instruction_type));
+                    self.base.push(ASMToken::Instruction(instruction_type));
                     buffer.clear();
                     continue;
                 }
 
                 if let Ok(register_type) = RegisterType::from_str(&buffer) {
-                    tokens.push(ASMToken::Register(register_type));
+                    self.base.push(ASMToken::Register(register_type));
                     buffer.clear();
                     continue;
                 }
 
-                tokens.push(ASMToken::Identifier(buffer.clone()));
+                self.base.push(ASMToken::Identifier(buffer.clone()));
                 buffer.clear();
                 continue;
             }
             if value.is_digit(10) {
-                tokens.push(self.base.parse_interger()?);
+                self.base.parse_interger()?;
                 continue;
             }
             if value == ',' {
                 self.base.consume();
-                tokens.push(ASMToken::Comma);
+                self.base.push(ASMToken::Comma);
                 continue;
             }
             if value == '\n' {
                 self.base.consume();
-                tokens.push(ASMToken::NewLine);
+                self.base.push(ASMToken::NewLine);
                 continue;
             }
             if value == ';' {
@@ -78,41 +77,41 @@ impl<'a> ASMLexer<'a> {
             }
             if value == '+' {
                 self.base.consume();
-                tokens.push(ASMToken::Plus);
+                self.base.push(ASMToken::Plus);
                 continue;
             }
             if value == '[' {
                 self.base.consume();
-                tokens.push(ASMToken::LBracket);
+                self.base.push(ASMToken::LBracket);
                 continue;
             }
             if value == ']' {
                 self.base.consume();
-                tokens.push(ASMToken::RBracket);
+                self.base.push(ASMToken::RBracket);
                 continue;
             }
             if value == '{' {
                 self.base.consume();
-                tokens.push(ASMToken::LCurly);
+                self.base.push(ASMToken::LCurly);
                 continue;
             }
             if value == '}' {
                 self.base.consume();
-                tokens.push(ASMToken::RCurly);
+                self.base.push(ASMToken::RCurly);
                 continue;
             }
             if self.base.peek_match("->") {
                 self.base.consumes(2);
-                tokens.push(ASMToken::Arrow);
+                self.base.push(ASMToken::Arrow);
                 continue;
             }
             if value == '-' {
                 self.base.consume();
-                tokens.push(ASMToken::Minus);
+                self.base.push(ASMToken::Minus);
                 continue;
             }
             if value == '\"' {
-                tokens.push(self.base.parse_string()?);
+                self.base.parse_string()?;
                 continue;
             }
 
@@ -121,8 +120,11 @@ impl<'a> ASMLexer<'a> {
                 continue;
             }
             buffer.push(self.base.consume().unwrap());
-            return Err(LexerError::InvalidToken(buffer));
+            return Err(LexerError::InvalidToken(
+                buffer,
+                self.base.current_location(),
+            ));
         }
-        return Ok(tokens);
+        return Ok(self.base.tokens);
     }
 }

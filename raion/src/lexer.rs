@@ -1,13 +1,13 @@
-use std::{error::Error, fmt::Display, num::ParseIntError};
+use std::{error::Error, fmt::Display, num::ParseIntError, path::Path};
 
-use crate::token::Token;
+use crate::{token::Token, Location, WithLocation};
 
 pub mod asm_lexer;
 pub mod rin_lexer;
 
 #[derive(Debug)]
 pub enum LexerError {
-    InvalidToken(String),
+    InvalidToken(String, Location),
     InvalidInterger(ParseIntError),
     InvalidEscapeSequence(String),
     ExpectedEndDoubleQuote(Option<char>),
@@ -17,7 +17,13 @@ pub enum LexerError {
 impl Display for LexerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidToken(buffer) => write!(f, "Trying to tokenize invalid input: {}", buffer),
+            Self::InvalidToken(buffer, location) => {
+                write!(
+                    f,
+                    "Trying to tokenize invalid input: {} at {}",
+                    buffer, location
+                )
+            }
             Self::InvalidInterger(e) => write!(f, "Trying to tokenize invalid number, {}", e),
             Self::InvalidEscapeSequence(escape_sequence) => {
                 write!(f, "Invalid escape sequence: '{}'", escape_sequence)
@@ -41,14 +47,27 @@ impl From<ParseIntError> for LexerError {
     }
 }
 
-pub struct LexerBase<'a> {
+pub struct LexerBase<'a, T: Token> {
     buffer: &'a str,
     index: usize,
+    row: usize,
+    column: usize,
+    tokens: Vec<WithLocation<T>>,
+    file: &'a Path,
+    saved_location: Location,
 }
 
-impl<'a> LexerBase<'a> {
-    pub fn new(buffer: &'a str) -> Self {
-        Self { buffer, index: 0 }
+impl<'a, T: Token> LexerBase<'a, T> {
+    pub fn new(buffer: &'a str, file: &'a Path) -> Self {
+        Self {
+            buffer,
+            index: 0,
+            row: 0,
+            column: 1,
+            tokens: Vec::new(),
+            file,
+            saved_location: Location::default(),
+        }
     }
 
     fn peek(&self, offset: usize) -> Option<char> {
@@ -61,7 +80,12 @@ impl<'a> LexerBase<'a> {
 
     fn consume(&mut self) -> Option<char> {
         if let Some(&byte) = self.buffer.as_bytes().get(self.index) {
+            if byte as char == '\n' {
+                self.row = 0;
+                self.column += 1;
+            }
             self.index += 1;
+            self.row += 1;
             return Some(byte as char);
         } else {
             return None;
@@ -84,75 +108,79 @@ impl<'a> LexerBase<'a> {
         return valid;
     }
 
-    fn parse_interger<T: Token>(&mut self) -> Result<T, LexerError> {
-        let mut buffer = String::new();
-        if self.peek_match("0x") {
-            self.consume();
-            self.consume();
+    fn with_location(&self, token: T) -> WithLocation<T> {
+        return WithLocation::new(token, self.current_location());
+    }
 
-            while self.peek(0).is_some_and(|e| e.is_digit(16) || e == '_') {
-                if self.peek(0).is_some_and(|e| e == '_') {
-                    self.consume();
-                    continue;
-                }
-                buffer.push(self.consume().unwrap());
-            }
+    fn push(&mut self, token: T) {
+        self.tokens.push(self.with_location(token));
+    }
 
-            return Ok(Token::from_u64(
-                u64::from_str_radix(&buffer, 16).map_err(LexerError::InvalidInterger)?,
-            ));
-        }
-        if self.peek_match("0o") {
-            self.consume();
-            self.consume();
-
-            while self.peek(0).is_some_and(|e| e.is_digit(8)) {
-                if self.peek(0).is_some_and(|e| e == '_') {
-                    self.consume();
-                    continue;
-                }
-
-                buffer.push(self.consume().unwrap());
-            }
-
-            return Ok(Token::from_u64(
-                u64::from_str_radix(&buffer, 8).map_err(LexerError::InvalidInterger)?,
-            ));
-        }
-        if self.peek_match("0b") {
-            self.consumes(2);
-
-            while self.peek(0).is_some_and(|e| e.is_digit(2)) {
-                if self.peek(0).is_some_and(|e| e == '_') {
-                    self.consume();
-                    continue;
-                }
-
-                buffer.push(self.consume().unwrap());
-            }
-
-            return Ok(Token::from_u64(
-                u64::from_str_radix(&buffer, 2).map_err(LexerError::InvalidInterger)?,
-            ));
-        }
-
-        buffer.push(self.consume().unwrap());
-
-        while self.peek(0).is_some_and(|e| e.is_digit(10) || e == '_') {
-            if self.peek(0).is_some_and(|e| e == '_') {
+    fn consume_while<P, I>(&mut self, buffer: &mut String, predicate: P, ignored: I)
+    where
+        P: Fn(char) -> bool,
+        I: Fn(char) -> bool,
+    {
+        while self.peek(0).is_some_and(|e| predicate(e)) {
+            if self.peek(0).is_some_and(|e| ignored(e)) {
                 self.consume();
                 continue;
             }
 
             buffer.push(self.consume().unwrap());
         }
-        return Ok(Token::from_u64(
-            buffer.parse::<u64>().map_err(LexerError::InvalidInterger)?,
-        ));
     }
 
-    fn parse_string<T: Token>(&mut self) -> Result<T, LexerError> {
+    fn current_location(&self) -> Location {
+        return self.saved_location.clone();
+    }
+
+    fn save_location(&mut self) {
+        self.saved_location = Location::new(self.row, self.column, self.file.to_path_buf());
+    }
+
+    fn parse_interger(&mut self) -> Result<(), LexerError> {
         let mut buffer = String::new();
+        self.save_location();
+        if self.peek_match("0x") {
+            self.consumes(2);
+
+            self.consume_while(&mut buffer, |e| e.is_digit(16) || e == '_', |e| e == '_');
+
+            self.push(Token::from_u64(
+                u64::from_str_radix(&buffer, 16).map_err(LexerError::InvalidInterger)?,
+            ));
+        } else if self.peek_match("0o") {
+            self.consumes(2);
+
+            self.consume_while(&mut buffer, |e| e.is_digit(8) || e == '_', |e| e == '_');
+
+            self.push(Token::from_u64(
+                u64::from_str_radix(&buffer, 8).map_err(LexerError::InvalidInterger)?,
+            ));
+        } else if self.peek_match("0b") {
+            self.consumes(2);
+
+            self.consume_while(&mut buffer, |e| e.is_digit(2) || e == '_', |e| e == '_');
+
+            self.push(Token::from_u64(
+                u64::from_str_radix(&buffer, 2).map_err(LexerError::InvalidInterger)?,
+            ));
+        } else {
+            buffer.push(self.consume().unwrap());
+
+            self.consume_while(&mut buffer, |e| e.is_digit(10) || e == '_', |e| e == '_');
+
+            self.push(Token::from_u64(
+                buffer.parse::<u64>().map_err(LexerError::InvalidInterger)?,
+            ));
+        }
+        return Ok(());
+    }
+
+    fn parse_string(&mut self) -> Result<(), LexerError> {
+        let mut buffer = String::new();
+        self.save_location();
         self.consume();
         loop {
             while self
@@ -251,6 +279,7 @@ impl<'a> LexerBase<'a> {
             }
             break;
         }
-        return Ok(Token::from_string(buffer));
+        self.push(Token::from_string(buffer));
+        return Ok(());
     }
 }

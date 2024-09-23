@@ -1,126 +1,130 @@
-use std::str::FromStr;
+use std::{path::Path, str::FromStr};
 
-use crate::token::rin_token::{Keyword, Operator, PrimitiveType, RinToken};
+use crate::{
+    token::rin_token::{Keyword, Operator, PrimitiveType, RinToken},
+    WithLocation,
+};
 
 use super::{LexerBase, LexerError};
 
 pub struct RinLexer<'a> {
-    base: LexerBase<'a>,
+    base: LexerBase<'a, RinToken>,
 }
 
 impl<'a> RinLexer<'a> {
-    pub fn new(buffer: &'a str) -> Self {
+    pub fn new(buffer: &'a str, file: &'a Path) -> Self {
         Self {
-            base: LexerBase::new(buffer),
+            base: LexerBase::new(buffer, file),
         }
     }
 
-    pub fn tokenize(mut self) -> Result<Vec<RinToken>, LexerError> {
-        let mut tokens = Vec::new();
+    pub fn tokenize(mut self) -> Result<Vec<WithLocation<RinToken>>, LexerError> {
         let mut buffer = String::new();
 
         while let Some(value) = self.base.peek(0) {
             if self.base.peek_match("//") {
-                self.base.consume();
-                while self.base.peek(0).is_some_and(|e| e != '\n') {
-                    self.base.consume();
-                }
+                self.base
+                    .consume_while(&mut String::new(), |e| e != '\n', |_| false);
                 continue;
             }
             if self.base.peek_match("->") {
+                self.base.save_location();
                 self.base.consumes(2);
-                tokens.push(RinToken::Arrow);
+                self.base.push(RinToken::Arrow);
                 continue;
             }
             if value.is_alphabetic() {
-                buffer.push(self.base.consume().unwrap());
-                while self
-                    .base
-                    .peek(0)
-                    .is_some_and(|e| e.is_alphanumeric() || e == '_')
-                {
-                    buffer.push(self.base.consume().unwrap());
-                }
+                self.base.save_location();
+                self.base.consume_while(
+                    &mut buffer,
+                    |e| e.is_alphanumeric() || e == '_',
+                    |_| false,
+                );
 
                 if let Ok(keyword) = Keyword::from_str(&buffer) {
-                    tokens.push(RinToken::Keyword(keyword));
+                    self.base.push(RinToken::Keyword(keyword));
                     buffer.clear();
                     continue;
                 }
 
                 if let Ok(primitive_type) = PrimitiveType::from_str(&buffer) {
-                    tokens.push(RinToken::Type(primitive_type));
+                    self.base.push(RinToken::Type(primitive_type));
                     buffer.clear();
                     continue;
                 }
 
-                tokens.push(RinToken::Identifier(buffer.clone()));
+                self.base.push(RinToken::Identifier(buffer.clone()));
                 buffer.clear();
                 continue;
             }
             if value.is_digit(10) {
-                tokens.push(self.base.parse_interger()?);
+                self.base.parse_interger()?;
                 continue;
             }
             if value == ',' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::Comma);
-                continue;
-            }
-            if value == '\n' {
-                self.base.consume();
-                tokens.push(RinToken::NewLine);
+                self.base.push(RinToken::Comma);
                 continue;
             }
             if value == ';' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::Semicolon);
+                self.base.push(RinToken::Semicolon);
                 continue;
             }
             if value == ':' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::Colon);
+                self.base.push(RinToken::Colon);
                 continue;
             }
             if value == '.' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::Dot);
+                self.base.push(RinToken::Dot);
                 continue;
             }
             if value == '+' || value == '-' || value == '*' || value == '/' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::Operator(
+                self.base.push(RinToken::Operator(
                     Operator::from_str(&value.to_string()).unwrap(),
                 ));
                 continue;
             }
             if value == '=' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::Equals);
+                self.base.push(RinToken::Equals);
                 continue;
             }
             if value == '{' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::LCurly);
+                self.base.push(RinToken::LCurly);
                 continue;
             }
             if value == '}' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::RCurly);
+                self.base.push(RinToken::RCurly);
                 continue;
             }
             if value == '(' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::LRoundBracket);
+                self.base.push(RinToken::LRoundBracket);
                 continue;
             }
             if value == ')' {
+                self.base.save_location();
                 self.base.consume();
-                tokens.push(RinToken::RRoundBracket);
+                self.base.push(RinToken::RRoundBracket);
                 continue;
             }
             if value == '\"' {
-                tokens.push(self.base.parse_string()?);
+                self.base.parse_string()?;
                 continue;
             }
             if value.is_whitespace() {
@@ -128,9 +132,12 @@ impl<'a> RinLexer<'a> {
                 continue;
             }
             buffer.push(self.base.consume().unwrap());
-            return Err(LexerError::InvalidToken(buffer));
+            return Err(LexerError::InvalidToken(
+                buffer,
+                self.base.current_location(),
+            ));
         }
 
-        return Ok(tokens);
+        return Ok(self.base.tokens);
     }
 }
