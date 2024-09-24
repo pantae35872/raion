@@ -1,8 +1,13 @@
 #![feature(map_try_insert)]
 
-use std::{fmt::Display, path::PathBuf};
+use std::{
+    fmt::Display,
+    ops::{Deref, DerefMut},
+    path::PathBuf,
+};
 
 pub mod compiler;
+pub mod error;
 pub mod lexer;
 pub mod token;
 
@@ -17,6 +22,20 @@ pub struct Location {
     file: PathBuf,
     row: usize,
     column: usize,
+}
+
+impl<T> Deref for WithLocation<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.value()
+    }
+}
+
+impl<T> DerefMut for WithLocation<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.value_mut()
+    }
 }
 
 impl<T> WithLocation<T> {

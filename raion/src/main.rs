@@ -14,26 +14,30 @@ use raion::{
     lexer::{asm_lexer::ASMLexer, rin_lexer::RinLexer},
 };
 
-use inline_colorization::*;
-
 fn main() -> ExitCode {
     let mut file = File::open("in.rin").expect("file not found");
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
     let lexer = RinLexer::new(&data, Path::new("in.rin"));
-    let tokens = lexer.tokenize().expect("Failed to tokenize rin");
+    let tokens = match lexer.tokenize() {
+        Ok(res) => res,
+        Err(err) => {
+            eprintln!("{err}");
+            return ExitCode::FAILURE;
+        }
+    };
     let mut compiler = RinCompiler::new(tokens, RinPath::new("main"));
     match compiler.parse() {
         Ok(_) => {}
         Err(err) => {
-            eprintln!("{style_bold}{color_red}error{color_reset}{style_reset}: {err}");
+            eprintln!("{err}");
             return ExitCode::FAILURE;
         }
     };
     let generated_asm = match compiler.generate() {
         Ok(res) => res,
         Err(err) => {
-            eprintln!("{style_bold}{color_red}error{color_reset}{style_reset}: {err}");
+            eprintln!("{err}");
             return ExitCode::FAILURE;
         }
     };

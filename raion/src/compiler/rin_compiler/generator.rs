@@ -3,29 +3,123 @@ use std::{collections::HashMap, error::Error, fmt::Display};
 use block_generator::{BlockGenerator, ReturnDestion};
 use common::{register::RegisterType, VecUtils};
 
+use crate::{error::ErrorGenerator, WithLocation};
+
 use super::{Parameter, Path, Procedure, RinAst, Type};
+use inline_colorization::*;
 
 mod block_generator;
 
 #[derive(Debug)]
 pub enum GeneratorError<'a> {
-    UndefinedVariable(&'a String),
-    UndefinedProcedure(&'a Path),
-    UnexpectedType { expected: Type, unexpected: Type },
+    UndefinedVariable(&'a WithLocation<String>),
+    UndefinedProcedure(&'a WithLocation<Path>),
+    UnexpectedType {
+        expected: WithLocation<Type>,
+        unexpected: WithLocation<Type>,
+    },
 }
 
 impl<'a> Display for GeneratorError<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UndefinedVariable(var) => write!(f, "Use of undefined variable `{var}`"),
-            Self::UndefinedProcedure(proc) => write!(f, "Use of undefined procedure `{proc}`"),
-            Self::UnexpectedType {
-                expected,
-                unexpected,
-            } => write!(
+            Self::UndefinedVariable(WithLocation {
+                value: var,
+                location,
+            }) => write!(
                 f,
-                "Unexpected type expected: `{expected}` found: `{unexpected}`"
+                "{}",
+                ErrorGenerator::new(
+                    location,
+                    format!("{style_bold}Use of undefined variable `{var}`{style_reset}"),
+                    location.column.to_string().len()
+                )
+                .vertical_pipe(format!("{}", location.column))?
+                .write_line(location.column)?
+                .new_line()?
+                .vertical_pipe("")?
+                .pointer(location.row, "", '^', color_red)?
+                .build()
             ),
+            Self::UndefinedProcedure(WithLocation {
+                value: proc,
+                location,
+            }) => write!(
+                f,
+                "{}",
+                ErrorGenerator::new(
+                    location,
+                    format!("{style_bold}Use of undefined procedure `{proc}`{style_reset}"),
+                    location.column.to_string().len()
+                )
+                .vertical_pipe(format!("{}", location.column))?
+                .write_line(location.column)?
+                .new_line()?
+                .vertical_pipe("")?
+                .pointer(location.row, "", '^', color_red)?
+                .build()
+            ),
+            Self::UnexpectedType {
+                expected:
+                    WithLocation {
+                        value: expected,
+                        location,
+                    },
+                unexpected:
+                    WithLocation {
+                        value: unexpected,
+                        location: unexpected_location,
+                    },
+            } => {
+                if location.column() == unexpected_location.column() {
+                    write!(f, "{}", ErrorGenerator::new(
+                        unexpected_location,
+                        format!("{style_bold}Unexpected type. expected `{expected}` found `{unexpected}`{style_reset}"),
+                        unexpected_location
+                            .column
+                            .to_string()
+                            .len()
+                        )
+                        .vertical_pipe(format!("{}", unexpected_location.column))?
+                        .write_line(unexpected_location.column)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(location.row, "", '^', color_blue)?
+                        .pointer(unexpected_location.row - location.row - 1, format!(" expected `{expected}`, found `{unexpected}`"), '^', color_red)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(location.row, "", '|', color_blue)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .ident_string(location.row, "expected due to this", color_blue)?.build())
+                } else {
+                    write!(f, "{}", ErrorGenerator::new(
+                        unexpected_location,
+                        format!("{style_bold}Unexpected type. expected `{expected}` found `{unexpected}`{style_reset}"),
+                        unexpected_location
+                            .column
+                            .to_string()
+                            .len()
+                            .max(unexpected_location.column.to_string().len()),
+                        ).vertical_pipe(format!("{}", unexpected_location.column))?
+                        .write_line(unexpected_location.column)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(unexpected_location.row, format!(" expected `{expected}`, found `{unexpected}`"), '^', color_red)?
+                        .new_line()?
+                        .vertical_pipe(format!("{}", location.column))?
+                        .write_line(location.column)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(location.row, "", '^', color_blue)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(location.row, "", '|', color_blue)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .ident_string(location.row, "expected due to this", color_blue)?.build())
+                }
+            }
         }
     }
 }
@@ -50,14 +144,14 @@ struct ProcGenerator<'a> {
 struct ProcHeader {
     callable_path: Path,
     real_path: Path,
-    parameters: Vec<Type>,
+    parameters: Vec<WithLocation<Type>>,
     return_type: Type,
 }
 
 #[derive(Clone)]
 struct Variable {
     stack_loc: usize,
-    var_type: Type,
+    var_type: WithLocation<Type>,
 }
 
 enum ExpressionDestination {
@@ -83,16 +177,20 @@ impl Generator {
             "proc start -> {{\n   call main$main\n   exit a64\n}}\n"
         ));
         for procedure in ast.procedures.iter() {
-            let param_type = procedure.parameters.iter().map(|e| e.param_type).collect();
-            let mut real_path = vec![procedure.name.clone()];
+            let param_type = procedure
+                .parameters
+                .iter()
+                .map(|e| e.param_type.clone())
+                .collect();
+            let mut real_path = vec![procedure.name.value.clone()];
             real_path.insert_slice(0, &package_path.path);
             self.callable_procs.push(ProcHeader {
                 real_path: Path { path: real_path },
                 callable_path: Path {
-                    path: vec![procedure.name.clone()],
+                    path: vec![procedure.name.value.clone()],
                 },
                 parameters: param_type,
-                return_type: procedure.return_type,
+                return_type: *procedure.return_type,
             });
         }
         for (procedure, header) in ast.procedures.iter().zip(self.callable_procs.iter()) {
@@ -130,7 +228,7 @@ impl<'a> ProcGenerator<'a> {
             .insert_str(0, &format!("   enter {}\n", self.stack_loc));
         self.body
             .insert_str(0, &format!("proc {} -> {{\n", header.real_path.parse()));
-        if proc.return_type != return_type {
+        if proc.return_type.value != return_type.value {
             return Err(GeneratorError::UnexpectedType {
                 expected: proc.return_type.clone(),
                 unexpected: return_type,
@@ -142,7 +240,7 @@ impl<'a> ProcGenerator<'a> {
     fn gen_argument(&mut self, parameters: &Vec<Parameter>) {
         for (i, parameter) in parameters.iter().enumerate() {
             self.variables.insert(
-                parameter.name.clone(),
+                parameter.name.value.clone(),
                 Variable {
                     stack_loc: self.stack_loc,
                     var_type: parameter.param_type.clone(),

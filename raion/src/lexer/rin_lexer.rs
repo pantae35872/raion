@@ -131,6 +131,7 @@ impl<'a> RinLexer<'a> {
                 self.base.consume();
                 continue;
             }
+            self.base.save_location();
             buffer.push(self.base.consume().unwrap());
             return Err(LexerError::InvalidToken(
                 buffer,

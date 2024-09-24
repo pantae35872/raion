@@ -1,6 +1,6 @@
-use std::{error::Error, fmt::Display, fs::File, io::Read};
+use std::{error::Error, fmt::Display};
 
-use crate::{token::Token, Location, WithLocation};
+use crate::{error::ErrorGenerator, token::Token, Location, WithLocation};
 use inline_colorization::*;
 
 pub mod asm_compiler;
@@ -18,43 +18,29 @@ impl<T: Token> Display for CompilerError<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnexpectedToken(token) => {
-                write!(
-                    f,
-                    "{style_bold}Trying to compile with unexpected token `{}`{style_reset}{}",
-                    token
-                        .clone()
-                        .map(|e| format!("{}", e.value()))
-                        .unwrap_or("".to_string()),
-                    token
-                        .clone()
-                        .map(|e| format!(
-                            " \n {color_blue}{style_bold}---->{style_reset}{color_reset} {}\n",
-                            e.location()
-                        ))
-                        .unwrap_or("".to_string())
-                )?;
-
-                if let Some(token) = token {
-                    let mut file =
-                        File::open(token.location.file()).expect("Compilation file went missing");
-                    let mut file_buf = String::new();
-                    file.read_to_string(&mut file_buf).unwrap();
-                    let line = file_buf.lines().nth(token.location.column() - 1).unwrap();
+                if let Some(WithLocation {
+                    value: token,
+                    location,
+                }) = token
+                {
                     write!(
                         f,
-                        "{color_blue}{style_bold}{} |{style_reset}{color_reset} {line}\n",
-                        token.location.column()
-                    )?;
-                    for _ in 0..token.location.column().to_string().len() {
-                        write!(f, " ")?;
-                    }
-                    write!(f, " {color_blue}{style_bold}|{style_reset}{color_reset} ")?;
-                    for _ in 0..token.location.row - 1 {
-                        write!(f, " ")?;
-                    }
-                    write!(f, "{color_yellow}{style_bold}^{style_reset}{color_reset}")?;
+                        "{}",
+                        ErrorGenerator::new(
+                            location,
+                            format!("{style_bold}Unexpected token `{token}`{style_reset}"),
+                            location.column.to_string().len()
+                        )
+                        .vertical_pipe(format!("{}", location.column))?
+                        .write_line(location.column)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(location.row, "", '^', color_red)?
+                        .build()
+                    )
+                } else {
+                    write!(f, "Unexpected Token")
                 }
-                return Ok(());
             }
             Self::UndefinedLabel(label, line) => {
                 write!(f, "Undefied label `{label}` at line {line}")
@@ -97,11 +83,10 @@ impl<T: Token> CompilerBase<T> {
         }
     }
 
-    pub fn expect_token(&mut self, expected: T) -> Result<(), CompilerError<T>> {
+    pub fn expect_token(&mut self, expected: T) -> Result<&Location, CompilerError<T>> {
         let token = self.peek(0).ok_or(CompilerError::UnexpectedToken(None))?;
         if *token.value() == expected {
-            self.consume();
-            return Ok(());
+            return Ok(&self.consume().unwrap().location);
         } else {
             return Err(CompilerError::UnexpectedToken(Some(token.clone())));
         }

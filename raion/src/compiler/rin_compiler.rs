@@ -15,7 +15,7 @@ mod generator;
 pub struct RinAst {
     imports: Vec<Import>,
     module: Vec<Module>,
-    procedures: Vec<Procedure>,
+    procedures: Vec<WithLocation<Procedure>>,
 }
 
 #[derive(Debug)]
@@ -30,21 +30,21 @@ struct Module {
 
 #[derive(Debug)]
 struct Procedure {
-    name: String,
-    return_type: Type,
+    name: WithLocation<String>,
+    return_type: WithLocation<Type>,
     parameters: Vec<Parameter>,
-    body: Block,
+    body: WithLocation<Block>,
 }
 
 #[derive(Debug)]
 struct Block {
-    body: Vec<Statement>,
+    body: Vec<WithLocation<Statement>>,
 }
 
 #[derive(Debug)]
 struct Parameter {
-    param_type: Type,
-    name: String,
+    param_type: WithLocation<Type>,
+    name: WithLocation<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -72,30 +72,34 @@ pub enum TypeSizes {
 
 #[derive(Debug)]
 enum Statement {
-    Expression(Expression),
-    Return(Expression),
+    Expression(WithLocation<Expression>),
+    Return(WithLocation<Expression>),
     VariableDecl {
-        name: String,
-        var_type: Type,
-        value: Expression,
+        name: WithLocation<String>,
+        var_type: WithLocation<Type>,
+        value: WithLocation<Expression>,
     },
     VariableMutate {
-        name: String,
-        value: Expression,
+        name: WithLocation<String>,
+        value: WithLocation<Expression>,
     },
 }
 
 #[derive(Debug)]
 enum Expression {
-    Term(Term),
-    BinaryOp(Box<Expression>, BinaryOperator, Box<Expression>),
+    Term(WithLocation<Term>),
+    BinaryOp(
+        Box<WithLocation<Expression>>,
+        WithLocation<BinaryOperator>,
+        Box<WithLocation<Expression>>,
+    ),
 }
 
 #[derive(Debug)]
 enum Term {
-    Literal(Literal),
-    ProcedureCall(Path, Vec<Expression>),
-    LocalVariableAccess(String),
+    Literal(WithLocation<Literal>),
+    ProcedureCall(WithLocation<Path>, Vec<WithLocation<Expression>>),
+    LocalVariableAccess(WithLocation<String>),
 }
 
 #[derive(Debug)]
@@ -162,7 +166,9 @@ impl RinCompiler {
                     }
                     Keyword::Procedure => {
                         let proc = self.parse_proc()?;
-                        self.program.procedures.push(proc);
+                        self.program
+                            .procedures
+                            .push(WithLocation::new(proc, location));
                     }
                     unexpected => {
                         return Err(CompilerError::UnexpectedToken(Some(WithLocation::new(
@@ -194,17 +200,17 @@ impl RinCompiler {
         });
     }
 
-    fn parse_block(&mut self) -> Result<Block, CompilerError<RinToken>> {
-        self.base.expect_token(RinToken::LCurly)?;
+    fn parse_block(&mut self) -> Result<WithLocation<Block>, CompilerError<RinToken>> {
+        let loc = self.base.expect_token(RinToken::LCurly)?.clone();
         let mut statements = Vec::new();
         while let Some(token) = self.base.peek(0).cloned() {
             match token {
                 WithLocation {
                     value: RinToken::Keyword(_) | RinToken::Identifier(_) | RinToken::Type(_),
-                    ..
+                    location,
                 } => {
                     let statement = self.parse_statement()?;
-                    statements.push(statement);
+                    statements.push(WithLocation::new(statement, location));
                 }
                 WithLocation {
                     value: RinToken::RCurly,
@@ -216,7 +222,7 @@ impl RinCompiler {
             }
         }
         self.base.expect_token(RinToken::RCurly)?;
-        return Ok(Block { body: statements });
+        return Ok(WithLocation::new(Block { body: statements }, loc));
     }
 
     fn parse_statement(&mut self) -> Result<Statement, CompilerError<RinToken>> {
@@ -277,18 +283,38 @@ impl RinCompiler {
         return value;
     }
 
-    fn parse_expression(&mut self, min_prec: usize) -> Result<Expression, CompilerError<RinToken>> {
-        let mut lhs = Expression::Term(self.parse_term()?);
+    fn parse_expression(
+        &mut self,
+        min_prec: usize,
+    ) -> Result<WithLocation<Expression>, CompilerError<RinToken>> {
+        let WithLocation {
+            value: lhs,
+            location,
+        } = self.parse_term()?;
+        let mut lhs = WithLocation::new(
+            Expression::Term(WithLocation::new(lhs, location.clone())),
+            location.clone(),
+        );
         while let Some(token) = self.base.peek(0).cloned() {
-            match token.value_owned() {
-                RinToken::Operator(operator) => {
+            match token {
+                WithLocation {
+                    value: RinToken::Operator(operator),
+                    location,
+                } => {
                     if operator.prec() < min_prec {
                         break;
                     }
                     self.base.consume();
                     let rhs = self.parse_expression(operator.prec() + 1)?;
 
-                    lhs = Expression::BinaryOp(lhs.into(), operator.into(), rhs.into());
+                    lhs = WithLocation::new(
+                        Expression::BinaryOp(
+                            lhs.into(),
+                            WithLocation::new(operator.into(), location.clone()),
+                            rhs.into(),
+                        ),
+                        location.clone(),
+                    );
                 }
                 _ => break,
             }
@@ -334,7 +360,7 @@ impl RinCompiler {
         return Ok(params);
     }
 
-    fn parse_term(&mut self) -> Result<Term, CompilerError<RinToken>> {
+    fn parse_term(&mut self) -> Result<WithLocation<Term>, CompilerError<RinToken>> {
         return match self
             .base
             .peek(0)
@@ -343,35 +369,51 @@ impl RinCompiler {
         {
             WithLocation {
                 value: RinToken::Interger(interger),
-                ..
+                location,
             } => {
                 self.base.consume();
                 let value = match self
                     .base
                     .peek(0)
+                    .cloned()
                     .ok_or(CompilerError::UnexpectedToken(None))?
                 {
                     WithLocation {
                         value: RinToken::Type(typ),
-                        ..
+                        location,
                     } => match typ {
-                        PrimitiveType::U64 => Ok(Term::Literal(Literal::U64(interger as u64))),
-                        PrimitiveType::U32 => Ok(Term::Literal(Literal::U32(interger as u32))),
-                        PrimitiveType::U16 => Ok(Term::Literal(Literal::U16(interger as u16))),
-                        PrimitiveType::U8 => Ok(Term::Literal(Literal::U8(interger as u8))),
+                        PrimitiveType::U64 => Ok(Term::Literal(WithLocation::new(
+                            Literal::U64(interger as u64),
+                            location,
+                        ))),
+                        PrimitiveType::U32 => Ok(Term::Literal(WithLocation::new(
+                            Literal::U32(interger as u32),
+                            location,
+                        ))),
+                        PrimitiveType::U16 => Ok(Term::Literal(WithLocation::new(
+                            Literal::U16(interger as u16),
+                            location,
+                        ))),
+                        PrimitiveType::U8 => Ok(Term::Literal(WithLocation::new(
+                            Literal::U8(interger as u8),
+                            location,
+                        ))),
                         _ => todo!(),
                     },
                     unexpected => Err(CompilerError::UnexpectedToken(Some(unexpected.clone()))),
                 };
                 self.base.consume();
-                value
+                value.map(|e| WithLocation::new(e, location))
             }
             WithLocation {
                 value: RinToken::String(string),
-                ..
+                location,
             } => {
                 self.base.consume();
-                Ok(Term::Literal(Literal::String(string)))
+                Ok(WithLocation::new(
+                    Term::Literal(WithLocation::new(Literal::String(string), location.clone())),
+                    location,
+                ))
             }
             WithLocation {
                 value: RinToken::Keyword(keyword),
@@ -379,11 +421,17 @@ impl RinCompiler {
             } => match keyword {
                 Keyword::True => {
                     self.base.consume();
-                    Ok(Term::Literal(Literal::Boolean(true)))
+                    Ok(WithLocation::new(
+                        Term::Literal(WithLocation::new(Literal::Boolean(true), location.clone())),
+                        location,
+                    ))
                 }
                 Keyword::False => {
                     self.base.consume();
-                    Ok(Term::Literal(Literal::Boolean(false)))
+                    Ok(WithLocation::new(
+                        Term::Literal(WithLocation::new(Literal::Boolean(false), location.clone())),
+                        location,
+                    ))
                 }
                 unexpected => Err(CompilerError::UnexpectedToken(Some(WithLocation::new(
                     RinToken::Keyword(unexpected),
@@ -392,7 +440,7 @@ impl RinCompiler {
             },
             WithLocation {
                 value: RinToken::Identifier(ident),
-                ..
+                location,
             } => {
                 if self.base.peek(1).is_some_and(|e| {
                     matches!(e.value(), RinToken::LRoundBracket)
@@ -402,14 +450,20 @@ impl RinCompiler {
                 }
                 self.base.consume();
 
-                Ok(Term::LocalVariableAccess(ident))
+                Ok(WithLocation::new(
+                    Term::LocalVariableAccess(WithLocation::new(ident, location.clone())),
+                    location,
+                ))
             }
             unexpected => Err(CompilerError::UnexpectedToken(Some(unexpected))),
         };
     }
 
-    fn parse_fn_call(&mut self) -> Result<Term, CompilerError<RinToken>> {
-        let path = self.parse_path()?;
+    fn parse_fn_call(&mut self) -> Result<WithLocation<Term>, CompilerError<RinToken>> {
+        let WithLocation {
+            value: path,
+            location,
+        } = self.parse_path()?;
         self.base.expect_token(RinToken::LRoundBracket)?;
         let mut params = Vec::new();
         if self
@@ -418,7 +472,10 @@ impl RinCompiler {
             .is_some_and(|e| matches!(e.value(), RinToken::RRoundBracket))
         {
             self.base.consume();
-            return Ok(Term::ProcedureCall(path, params));
+            return Ok(WithLocation::new(
+                Term::ProcedureCall(WithLocation::new(path, location.clone()), params),
+                location,
+            ));
         }
 
         while self.base.peek(0).is_some() {
@@ -439,38 +496,44 @@ impl RinCompiler {
             self.base.expect_token(RinToken::Comma)?;
         }
 
-        return Ok(Term::ProcedureCall(path, params));
+        return Ok(WithLocation::new(
+            Term::ProcedureCall(WithLocation::new(path, location.clone()), params),
+            location,
+        ));
     }
 
     fn parse_imports(&mut self) -> Result<Import, CompilerError<RinToken>> {
         self.base.expect_token(RinToken::Keyword(Keyword::Import))?;
         let path = self.parse_path()?;
         self.base.expect_token(RinToken::Semicolon)?;
-        return Ok(Import { path });
+        return Ok(Import { path: path.value });
     }
 
     fn parse_module(&mut self) -> Result<Module, CompilerError<RinToken>> {
         self.base.expect_token(RinToken::Keyword(Keyword::Module))?;
         let name = self.parse_identifier()?;
         self.base.expect_token(RinToken::Semicolon)?;
-        return Ok(Module { name });
+        return Ok(Module { name: name.value });
     }
 
-    fn parse_path(&mut self) -> Result<Path, CompilerError<RinToken>> {
+    fn parse_path(&mut self) -> Result<WithLocation<Path>, CompilerError<RinToken>> {
         let mut path = Vec::new();
+        let mut location = None;
         while let Some(token) = self.base.peek(0).cloned() {
             match token {
                 WithLocation {
                     value: RinToken::Identifier(ident),
-                    ..
+                    location: loc,
                 } => {
+                    location = location.or_else(|| Some(loc));
                     self.base.consume();
                     path.push(ident);
                 }
                 WithLocation {
                     value: RinToken::Dot,
-                    ..
+                    location: loc,
                 } => {
+                    location = location.or_else(|| Some(loc));
                     self.base.consume();
                     continue;
                 }
@@ -488,7 +551,10 @@ impl RinCompiler {
             }
         }
 
-        return Ok(Path { path });
+        return Ok(WithLocation::new(
+            Path { path },
+            location.expect("This should not fail"),
+        ));
     }
 
     fn parse_parameter(&mut self) -> Result<Parameter, CompilerError<RinToken>> {
@@ -497,7 +563,7 @@ impl RinCompiler {
         return Ok(Parameter { param_type, name });
     }
 
-    fn parse_type(&mut self) -> Result<Type, CompilerError<RinToken>> {
+    fn parse_type(&mut self) -> Result<WithLocation<Type>, CompilerError<RinToken>> {
         match self
             .base
             .peek(0)
@@ -506,16 +572,16 @@ impl RinCompiler {
         {
             WithLocation {
                 value: RinToken::Type(typ),
-                ..
+                location,
             } => {
                 self.base.consume();
-                Ok(typ.into())
+                Ok(WithLocation::new(typ.into(), location))
             }
             unexpected => Err(CompilerError::UnexpectedToken(Some(unexpected))),
         }
     }
 
-    fn parse_identifier(&mut self) -> Result<String, CompilerError<RinToken>> {
+    fn parse_identifier(&mut self) -> Result<WithLocation<String>, CompilerError<RinToken>> {
         match self
             .base
             .peek(0)
@@ -524,10 +590,10 @@ impl RinCompiler {
         {
             WithLocation {
                 value: RinToken::Identifier(ident),
-                ..
+                location,
             } => {
                 self.base.consume();
-                Ok(ident)
+                Ok(WithLocation::new(ident, location))
             }
             unexpected => Err(CompilerError::UnexpectedToken(Some(unexpected))),
         }

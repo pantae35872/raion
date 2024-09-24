@@ -1,6 +1,7 @@
 use std::{error::Error, fmt::Display, num::ParseIntError, path::Path};
 
-use crate::{token::Token, Location, WithLocation};
+use crate::{error::ErrorGenerator, token::Token, Location, WithLocation};
+use inline_colorization::*;
 
 pub mod asm_lexer;
 pub mod rin_lexer;
@@ -9,28 +10,62 @@ pub mod rin_lexer;
 pub enum LexerError {
     InvalidToken(String, Location),
     InvalidInterger(ParseIntError),
-    InvalidEscapeSequence(String),
-    ExpectedEndDoubleQuote(Option<char>),
+    InvalidEscapeSequence(String, Location),
+    ExpectedEndDoubleQuote(Option<char>, Location),
     EndOfBuffer,
 }
 
 impl Display for LexerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidToken(buffer, location) => {
-                write!(
-                    f,
-                    "Trying to tokenize invalid input: {} at {}",
-                    buffer, location
+            Self::InvalidToken(buffer, location) => write!(
+                f,
+                "{}",
+                ErrorGenerator::new(
+                    location,
+                    format!("{style_bold}Invalid token `{buffer}`{style_reset}"),
+                    location.column.to_string().len()
                 )
-            }
+                .vertical_pipe(format!("{}", location.column))?
+                .write_line(location.column)?
+                .new_line()?
+                .vertical_pipe("")?
+                .pointer(location.row, "", '^', color_red)?
+                .build()
+            ),
             Self::InvalidInterger(e) => write!(f, "Trying to tokenize invalid number, {}", e),
-            Self::InvalidEscapeSequence(escape_sequence) => {
-                write!(f, "Invalid escape sequence: '{}'", escape_sequence)
-            }
-            Self::ExpectedEndDoubleQuote(found) => {
-                write!(f, "Expected end double quote found: {:?}", found)
-            }
+            Self::InvalidEscapeSequence(escape_sequence, location) => write!(
+                f,
+                "{}",
+                ErrorGenerator::new(
+                    location,
+                    format!(
+                        "{style_bold}Invalid escape sequence `{escape_sequence}` {style_reset}"
+                    ),
+                    location.column.to_string().len(),
+                )
+                .vertical_pipe(format!("{}", location.column))?
+                .write_line(location.column)?
+                .new_line()?
+                .vertical_pipe("")?
+                .pointer(location.row, "", '^', color_red)?
+                .build()
+            ),
+            Self::ExpectedEndDoubleQuote(_, location) => write!(
+                f,
+                "{}",
+                ErrorGenerator::new(
+                    location,
+                    format!("{style_bold}Unclosed string literal {style_reset}"),
+                    location.column.to_string().len(),
+                )
+                .vertical_pipe(format!("{}", location.column))?
+                .write_line(location.column)?
+                .new_line()?
+                .vertical_pipe("")?
+                .pointer(location.row, "", '^', color_red)?
+                .build()
+            ),
             Self::EndOfBuffer => write!(
                 f,
                 "trying to read next token but already at the end of the buffer"
@@ -249,10 +284,14 @@ impl<'a, T: Token> LexerBase<'a, T> {
             }
 
             if self.peek(0).is_some_and(|e| e == '\n') {
-                return Err(LexerError::ExpectedEndDoubleQuote(Some('\n')));
+                return Err(LexerError::ExpectedEndDoubleQuote(
+                    Some('\n'),
+                    self.current_location(),
+                ));
             }
 
             if self.peek(0).is_some_and(|e| e == '\\') {
+                let location = Location::new(self.row, self.column, self.file.to_path_buf());
                 self.consume();
                 match self.consume().ok_or(LexerError::EndOfBuffer)? {
                     'b' => buffer.push('\u{08}'),
@@ -264,10 +303,10 @@ impl<'a, T: Token> LexerBase<'a, T> {
                     '0' => buffer.push('\u{0}'),
                     '\\' => buffer.push('\u{5C}'),
                     invalid_escape => {
-                        return Err(LexerError::InvalidEscapeSequence(format!(
-                            "\\{}",
-                            invalid_escape
-                        )))
+                        return Err(LexerError::InvalidEscapeSequence(
+                            format!("\\{}", invalid_escape),
+                            location,
+                        ));
                     }
                 }
                 continue;
@@ -275,7 +314,10 @@ impl<'a, T: Token> LexerBase<'a, T> {
             if self.peek(0).is_some_and(|e| e == '\"') {
                 self.consume();
             } else {
-                return Err(LexerError::ExpectedEndDoubleQuote(self.peek(0)));
+                return Err(LexerError::ExpectedEndDoubleQuote(
+                    self.peek(0),
+                    self.current_location(),
+                ));
             }
             break;
         }
