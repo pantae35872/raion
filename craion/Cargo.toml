@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 bitflags = "2.6.0"
+inline_colorization = "0.1.6"
 
 [dependencies.xxhash-rust]
 version = "0.8.12"
@@ -12,7 +13,6 @@ features = ["xxh3", "const_xxh3"]
 
 [dependencies.common]
 path = "../common"
-
 
 [dependencies.proc]
 path = "../proc"

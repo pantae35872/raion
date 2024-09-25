@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::Read;
 use std::process::ExitCode;
 
+use common::commands::{Command, CommandExecutor};
 use common::sin::sections::SectionType;
 use common::sin::Sin;
 use craion::executor::Executor;
@@ -13,29 +14,38 @@ use craion::memory::address::Address;
 
 extern crate test;
 
-fn main() -> ExitCode {
+fn command_run(_command_name: &str, args: &mut env::Args) -> Result<(), String> {
     let mut executor = Executor::new(0xFFFFF);
-    let args: Vec<String> = env::args().collect();
-    let mut sin = File::open(args.get(1).expect("Provied sin file to be execute"))
-        .expect("The sin file does not exists");
+    let file = args.next().ok_or("no sin file is provided".to_string())?;
+    let mut sin = File::open(&file).map_err(|e| format!("couldn't read {file}: {e}"))?;
     let mut buf = Vec::new();
     sin.read_to_end(&mut buf).unwrap();
-    let sin = Sin::from_bytes(&buf).expect("");
+    let sin =
+        Sin::from_bytes(&buf).map_err(|e| format!("couldn't parse the provided sin file: {e}"))?;
     for section in sin.sections() {
         executor.load_section(section, sin.data());
     }
     let entry = if let Some(entry) = executor.section_manager().get_section("start") {
         if entry.section_type() != SectionType::Procedure {
-            eprintln!("Entry point is not a procedure");
-            return ExitCode::FAILURE;
+            return Err("entry point is not a procedure".to_string());
         }
         entry.mem_start()
     } else {
-        eprintln!("Entry point not found");
-        return ExitCode::FAILURE;
+        return Err("entry point not found".to_string());
     };
     executor.registers().set_ip(entry);
     executor.registers().set_sp(Address::new(0xFFFE));
     executor.execute();
-    return ExitCode::SUCCESS;
+    return Ok(());
+}
+
+fn main() -> ExitCode {
+    return CommandExecutor::new()
+        .new_command(Command::new(
+            "run",
+            "run the provided sin file",
+            "<sin_file>",
+            command_run,
+        ))
+        .run();
 }

@@ -76,7 +76,6 @@ enum Statement {
     Return(WithLocation<Expression>),
     VariableDecl {
         name: WithLocation<String>,
-        var_type: WithLocation<Type>,
         value: WithLocation<Expression>,
     },
     VariableMutate {
@@ -233,18 +232,14 @@ impl RinCompiler {
             .clone()
         {
             WithLocation {
-                value: RinToken::Type(_),
+                value: RinToken::Keyword(Keyword::Let),
                 ..
             } => {
-                let var_type = self.parse_type()?;
+                self.base.consume();
                 let name = self.parse_identifier()?;
                 self.base.expect_token(RinToken::Equals)?;
                 let value = self.parse_expression(0)?;
-                Ok(Statement::VariableDecl {
-                    name,
-                    var_type,
-                    value,
-                })
+                Ok(Statement::VariableDecl { name, value })
             }
             WithLocation {
                 value: RinToken::Identifier(_),
@@ -601,9 +596,19 @@ impl RinCompiler {
 }
 
 impl Path {
-    pub fn new(value: &str) -> Self {
+    pub fn new<T: AsRef<str>>(value: T) -> Self {
         Self {
-            path: value.split(".").map(|e| e.to_string()).collect(),
+            path: value.as_ref().split(".").map(|e| e.to_string()).collect(),
+        }
+    }
+
+    pub fn join(self, other: Self) -> Self {
+        Self {
+            path: self
+                .path
+                .into_iter()
+                .chain(other.path.into_iter())
+                .collect::<Vec<String>>(),
         }
     }
 

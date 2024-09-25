@@ -1,3 +1,4 @@
+pub mod commands;
 pub mod constants;
 pub mod memory;
 pub mod no_hash_hashmap;

@@ -21,6 +21,7 @@ pub enum Keyword {
     Module,
     Procedure,
     Return,
+    Let,
     True,
     False,
 }
@@ -112,6 +113,7 @@ impl Display for Keyword {
             Self::Import => write!(f, "import"),
             Self::Return => write!(f, "return"),
             Self::Module => write!(f, "module"),
+            Self::Let => write!(f, "let"),
             Self::Procedure => write!(f, "procedure"),
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
@@ -167,6 +169,7 @@ impl FromStr for Keyword {
             "module" => Ok(Self::Module),
             "return" => Ok(Self::Return),
             "proc" => Ok(Self::Procedure),
+            "let" => Ok(Self::Let),
             "true" => Ok(Self::True),
             "false" => Ok(Self::False),
             _ => Err(InvalidKeyword),

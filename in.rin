@@ -2,115 +2,65 @@ import std; // Not implemented
 
 module abc; // Not implemented
 
-//proc main():u32 -> {
-//  u32 part1 = main.part1();
-//  u32 part2 = main.part2();
-//  return part1;
-//}
-//
-//proc part1():u32 -> {
-//  u32 aaa = 10u32;
-//  u32 bbb = 20u32;
-//  u32 ccc = 30u32;
-//  return main.add(aaa, bbb, ccc);
-//}
-//
-//proc part2():u32 -> {
-//  u32 aaa = 20u32;
-//  u32 bbb = 20u32;
-//  u32 ccc = 5u32;
-//  return main.add(aaa, bbb, ccc);
-//}
-//
-//proc add(u32 num1, u32 num2, u32 num3):u32 -> {
-//  u32 x = num1 + num2 + num3;
-//  return x;
-//}
-//
-//proc another_fn():u32 -> {
-//  return 69u32;
-//}
-
-//proc main():u64 -> {
-//  u64 x = 15u64;
-//  u64 y = 25u64;
-//  u32 z = 500u32;
-//  u32 w = z;
-//  x = x + 7u64;
-//  u64 result = main.multiply(x, y, 2u64);
-//  return result;
-//}
-//
-//proc multiply(u64 a, u64 b, u64 c):u64 -> {
-//  u64 result = a * b * c + main.extra_fn();
-//  result = result - 25u64 / 5u64;
-//  return result;
-//}
-//
-//proc extra_fn():u64 -> {
-//  return 42u64;
-//}
-
-
 proc part1(): u32 -> {
-  u32 a = 1u32;
-  u32 b = 2u32;
-  u32 c = 3u32;
-  u32 d = 4u32;
-  u32 e = 5u32;
+  let a = 1u32;
+  let b = 2u32;
+  let c = 3u32;
+  let d = 4u32;
+  let e = 5u32;
   return sum(a, b, c, d, e);
 }
 
 proc main(): u32 -> {
-  u32 result1 = part1();
-  u32 result2 = part2();
-  u32 result3 = part3();
-  u32 result4 = part4();
-  u32 final_result = result1 + result2 + result3 + result4;
+  let result1 = part1();
+  let result2 = part2();
+  let result3 = part3();
+  let result4 = part4();
+  let final_result = result1 + result2 + result3 + result4;
   return final_result;
 }
 
 proc part2(): u32 -> {
-  u32 f = 6u32;
-  u32 g = 7u32;
-  u32 h = 8u32;
-  u32 i = 9u32;
-  u32 j = 10u32;
+  let f = 6u32;
+  let g = 7u32;
+  let h = 8u32;
+  let i = 9u32;
+  let j = 10u32;
   return sum(f, g, h, i, j);
 }
 
 proc part3(): u32 -> {
-  u32 k = 11u32;
-  u32 l = 12u32;
-  u32 m = 13u32;
-  u32 n = 14u32;
-  u32 o = 15u32;
+  let k = 11u32;
+  let l = 12u32;
+  let m = 13u32;
+  let n = 14u32;
+  let o = 15u32;
   return sum(k, l, m, n, o);
 }
 
 proc another_fn(): u32 -> {
-  u32 p = 10u32;
-  u32 b = 20u32;
+  let p = 10u32;
+  let b = 20u32;
   return p + b;
 }
 
 proc part4(): u32 -> {
-  u32 p = 16u32;
-  u32 q = 17u32;
-  u32 r = 18u32;
-  u32 s = 19u32;
-  u32 t = 20u32;
+  let p = 16u32;
+  let q = 17u32;
+  let r = 18u32;
+  let s = 19u32;
+  let t = 20u32;
   return sum(p, q, r, s, t);
 }
 
 proc sum(u32 num1, u32 num2, u32 num3, u32 num4, u32 num5): u32 -> {
-  u32 result = num1 + num2 + num3 + num4 + num5;
-  u32 modified_result = modify_result(result);
+  let result = num1 + num2 + num3 + num4 + num5;
+  let modified_result = modify_result(result);
   return modified_result;
 }
 
 proc modify_result(u32 input): u32 -> {
-  u32 x = input * 2u32;
+  let x = input * 2u32;
   x = x + 10u32;
   x = x / 3u32;
   x = x * extra_modifier();

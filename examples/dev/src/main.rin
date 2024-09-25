@@ -1,0 +1,6 @@
+import std; // Not implemented
+
+proc main(): u64 -> {
+  return 0u64;
+}
+

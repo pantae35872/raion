@@ -104,7 +104,7 @@ impl<'a, T: AsRef<str> + Display> ErrorGenerator<'a, T> {
 
     pub fn build(self) -> String {
         format!(
-            "{color_red}{style_bold}error{style_reset}{color_reset}: {}\n {}{color_blue}{style_bold}---->{style_reset}{color_reset} {}\n{}",
+            "{color_red}{style_bold}error{color_reset}:{style_reset}{color_reset} {}\n {}{color_blue}{style_bold}---->{style_reset}{color_reset} {}\n{}",
             self.message, {
                 let mut buffer = String::new();
                 for _ in 2..self.identation {

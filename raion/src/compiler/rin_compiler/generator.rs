@@ -100,7 +100,7 @@ impl<'a> Display for GeneratorError<'a> {
                             .column
                             .to_string()
                             .len()
-                            .max(unexpected_location.column.to_string().len()),
+                            .max(location.column.to_string().len()),
                         ).vertical_pipe(format!("{}", unexpected_location.column))?
                         .write_line(unexpected_location.column)?
                         .new_line()?
@@ -174,7 +174,7 @@ impl Generator {
         package_path: &Path,
     ) -> Result<String, GeneratorError<'a>> {
         self.output.push_str(&format!(
-            "proc start -> {{\n   call main$main\n   exit a64\n}}\n"
+            "proc start -> {{\n   call {package_path}$main\n   exit a64\n}}\n"
         ));
         for procedure in ast.procedures.iter() {
             let param_type = procedure
@@ -182,13 +182,9 @@ impl Generator {
                 .iter()
                 .map(|e| e.param_type.clone())
                 .collect();
-            let mut real_path = vec![procedure.name.value.clone()];
-            real_path.insert_slice(0, &package_path.path);
             self.callable_procs.push(ProcHeader {
-                real_path: Path { path: real_path },
-                callable_path: Path {
-                    path: vec![procedure.name.value.clone()],
-                },
+                real_path: package_path.clone().join(Path::new(&procedure.name.value)),
+                callable_path: Path::new(&procedure.name.value),
                 parameters: param_type,
                 return_type: *procedure.return_type,
             });

@@ -73,33 +73,30 @@ impl<'a> BlockGenerator<'a> {
         return_type: &ReturnDestion,
     ) -> Result<Option<WithLocation<Type>>, GeneratorError<'b>> {
         match statement {
-            Statement::VariableDecl {
-                name,
-                var_type,
-                value,
-            } => {
+            Statement::VariableDecl { name, value } => {
+                let stack_loc = *self.stack_loc;
+                let expr_type = self.gen_expression(value, ExpressionDestination::Stack, &[])?;
                 self.local_variables.insert(
                     name.value.clone(),
                     Variable {
-                        stack_loc: *self.stack_loc,
-                        var_type: var_type.clone(),
+                        stack_loc,
+                        var_type: expr_type,
                     },
                 );
-                let expr_type = self.gen_expression(value, ExpressionDestination::Stack, &[])?;
-                if expr_type.value != var_type.value {
-                    return Err(GeneratorError::UnexpectedType {
-                        expected: var_type.clone(),
-                        unexpected: expr_type,
-                    });
-                }
             }
             Statement::VariableMutate { name, value } => {
-                self.gen_expression(
+                let expr_type = self.gen_expression(
                     value,
                     ExpressionDestination::Register(RegisterType::A64),
                     &[],
                 )?;
                 let variable = self.get_variable(name)?;
+                if expr_type.value != variable.var_type.value {
+                    return Err(GeneratorError::UnexpectedType {
+                        expected: variable.var_type,
+                        unexpected: expr_type,
+                    });
+                }
                 let stack_loc = variable.stack_loc;
                 let bits = variable.var_type.size().byte() * 8;
                 self.add_instruction(format!("mov [sp + {stack_loc}], a{bits}"));
@@ -176,7 +173,7 @@ impl<'a> BlockGenerator<'a> {
         )?;
         if lhs_type.value != rhs_type.value {
             return Err(GeneratorError::UnexpectedType {
-                expected: lhs_type,
+                expected: WithLocation::new(lhs_type.value, location.clone()),
                 unexpected: rhs_type,
             });
         }
