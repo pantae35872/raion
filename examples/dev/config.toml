@@ -1,3 +1,11 @@
 [package]
 name = "dev"
 
+[deps.std]
+path = "std"
+dynamic = true
+
+[deps.other]
+path = "https://github.com/pantae35872/raion.git"
+dynamic = false
+

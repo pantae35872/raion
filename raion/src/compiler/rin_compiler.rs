@@ -124,14 +124,14 @@ pub struct Path {
     path: Vec<String>,
 }
 
-pub struct RinCompiler {
+pub struct RinCompiler<'a> {
     base: CompilerBase<RinToken>,
     program: RinAst,
-    module_path: Path,
+    module_path: &'a Path,
 }
 
-impl RinCompiler {
-    pub fn new(tokens: Vec<WithLocation<RinToken>>, module_path: Path) -> Self {
+impl<'a> RinCompiler<'a> {
+    pub fn new(tokens: Vec<WithLocation<RinToken>>, module_path: &'a Path) -> Self {
         Self {
             base: CompilerBase::new(tokens),
             program: RinAst::default(),
@@ -145,7 +145,7 @@ impl RinCompiler {
 
     pub fn generate(&self) -> Result<String, GeneratorError> {
         let generator = Generator::new();
-        return generator.generate(&self.program, &self.module_path);
+        return generator.generate(&self.program, self.module_path);
     }
 
     pub fn parse(&mut self) -> Result<(), CompilerError<RinToken>> {

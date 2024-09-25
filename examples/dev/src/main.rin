@@ -1,6 +1,7 @@
-import std; // Not implemented
+import std.print;
 
 proc main(): u64 -> {
+  print("Hello world");
   return 0u64;
 }
 

@@ -9,6 +9,7 @@ use std::{
 pub mod compiler;
 pub mod error;
 pub mod lexer;
+pub mod manager;
 pub mod token;
 
 #[derive(Debug)]
