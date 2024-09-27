@@ -1,4 +1,4 @@
-use std::{path::Path, str::FromStr};
+use std::{path::Path, str::FromStr, sync::Arc};
 
 use common::register::RegisterType;
 
@@ -14,7 +14,7 @@ pub struct ASMLexer<'a> {
 }
 
 impl<'a> ASMLexer<'a> {
-    pub fn new(buffer: &'a str, file: &'a Path) -> Self {
+    pub fn new(buffer: &'a str, file: Arc<Path>) -> Self {
         Self {
             base: LexerBase::new(buffer, file),
         }

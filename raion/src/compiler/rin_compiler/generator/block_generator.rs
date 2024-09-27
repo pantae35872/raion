@@ -12,19 +12,21 @@ use crate::{
     WithLocation,
 };
 
-use super::{ExpressionDestination, GeneratorError, ProcHeader, Variable, Variables};
+use super::{ExpressionDestination, GeneratorError, ProcedureHeader, Variable, Variables};
 
 pub struct BlockGenerator<'a> {
     stack_loc: &'a mut usize,
     variables: &'a Variables,
     local_variables: Variables,
     body: String,
-    callable_procs: &'a Vec<ProcHeader>,
+    callable_procs: &'a Vec<ProcedureHeader>,
 }
 
 pub enum ReturnDestion {
+    #[allow(dead_code)]
     Register(RegisterType),
     LeaveReturn,
+    #[allow(dead_code)]
     Return,
 }
 
@@ -32,7 +34,7 @@ impl<'a> BlockGenerator<'a> {
     pub fn new(
         variables: &'a Variables,
         stack_loc: &'a mut usize,
-        callable_procs: &'a Vec<ProcHeader>,
+        callable_procs: &'a Vec<ProcedureHeader>,
     ) -> Self {
         Self {
             variables,

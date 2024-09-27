@@ -18,7 +18,6 @@ pub enum PrimitiveType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Import,
-    Module,
     Procedure,
     Return,
     Let,
@@ -112,7 +111,6 @@ impl Display for Keyword {
         match self {
             Self::Import => write!(f, "import"),
             Self::Return => write!(f, "return"),
-            Self::Module => write!(f, "module"),
             Self::Let => write!(f, "let"),
             Self::Procedure => write!(f, "procedure"),
             Self::True => write!(f, "true"),
@@ -166,7 +164,6 @@ impl FromStr for Keyword {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         return match s {
             "import" => Ok(Self::Import),
-            "module" => Ok(Self::Module),
             "return" => Ok(Self::Return),
             "proc" => Ok(Self::Procedure),
             "let" => Ok(Self::Let),

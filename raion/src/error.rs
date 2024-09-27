@@ -2,6 +2,7 @@ use std::{
     fmt::{Display, Error},
     fs::File,
     io::Read,
+    path::Path,
 };
 
 use std::fmt::Write;
@@ -59,6 +60,24 @@ impl<'a, T: AsRef<str> + Display> ErrorGenerator<'a, T> {
             self.buffer,
             " {}",
             self.file
+                .lines()
+                .nth(column - 1)
+                .expect("The errored file is not valid")
+        )?;
+        return Ok(self);
+    }
+
+    pub fn write_line_file(mut self, column: usize, file: &Path) -> Result<Self, Error> {
+        let mut buffer = String::new();
+        File::open(file)
+            .expect("Cannot open file for error generation")
+            .read_to_string(&mut buffer)
+            .unwrap();
+        println!("{}", buffer);
+        write!(
+            self.buffer,
+            " {}",
+            buffer
                 .lines()
                 .nth(column - 1)
                 .expect("The errored file is not valid")

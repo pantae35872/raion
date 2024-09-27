@@ -1,30 +1,38 @@
-use std::{
-    env,
-    fs::{self, File},
-    io::{Read, Write},
-    path::Path,
-    process::ExitCode,
-};
+use std::{env, fs::File, io::Read, path::Path, process::ExitCode};
 
-use common::{
-    commands::{Command, CommandExecutor},
-    sin::Sin,
-};
+use common::commands::{Command, CommandExecutor};
 use raion::{
-    compiler::{
-        asm_compiler::ASMCompiler,
-        rin_compiler::{Path as RinPath, RinCompiler},
-    },
-    lexer::{asm_lexer::ASMLexer, rin_lexer::RinLexer},
-    manager::SingleUseCompiler,
+    compiler::rin_compiler::Path as RinPath,
+    manager::{CompilerManager, SingleUseCompiler},
 };
+use toml::Value;
 
-fn command_run(_command_name: &str, args: &mut env::Args) -> Result<(), String> {
+fn command_run(_command_name: &str, _args: &mut env::Args) -> Result<(), String> {
     todo!()
 }
 
-fn command_build(_command_name: &str, args: &mut env::Args) -> Result<(), String> {
-    todo!()
+fn command_build(_command_name: &str, _args: &mut env::Args) -> Result<(), String> {
+    let working_dir = std::env::current_dir().map_err(|e| format!("can't get current dir: {e}"))?;
+    let mut config = File::open(working_dir.join("config.toml"))
+        .map_err(|e| format!("failed to open 'config.toml' in the current directory: {e}"))?;
+    let mut config_buf = String::new();
+    config
+        .read_to_string(&mut config_buf)
+        .map_err(|err| format!("failed to read 'config.file': {err}"))?;
+    let config =
+        toml::from_str::<Value>(&config_buf).map_err(|e| format!("invalid config file: {e}"))?;
+    let package = config
+        .get("package")
+        .ok_or(format!("no package table in config file"))?;
+    let name = package
+        .get("name")
+        .ok_or(format!("no name in the package tabel"))?
+        .as_str()
+        .ok_or(format!("the provided name is not a string"))?;
+    let mut manager = CompilerManager::new(&working_dir, name);
+    manager.parse_files()?;
+    manager.generate()?;
+    return Ok(());
 }
 
 fn command_compile_emit_asm(_command_name: &str, args: &mut env::Args) -> Result<(), String> {

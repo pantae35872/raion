@@ -1,6 +1,6 @@
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display, slice};
 
-use generator::{Generator, GeneratorError};
+use generator::ProcedureHeader;
 
 use crate::{
     token::rin_token::{Keyword, Operator, PrimitiveType, RinToken},
@@ -9,27 +9,21 @@ use crate::{
 
 use super::{CompilerBase, CompilerError};
 
-mod generator;
+pub mod generator;
 
 #[derive(Default, Debug)]
 pub struct RinAst {
     imports: Vec<Import>,
-    module: Vec<Module>,
     procedures: Vec<WithLocation<Procedure>>,
 }
 
 #[derive(Debug)]
 struct Import {
-    path: Path,
+    path: WithLocation<Path>,
 }
 
 #[derive(Debug)]
-struct Module {
-    name: String,
-}
-
-#[derive(Debug)]
-struct Procedure {
+pub struct Procedure {
     name: WithLocation<String>,
     return_type: WithLocation<Type>,
     parameters: Vec<Parameter>,
@@ -124,28 +118,25 @@ pub struct Path {
     path: Vec<String>,
 }
 
-pub struct RinCompiler<'a> {
+pub struct RinCompiler {
     base: CompilerBase<RinToken>,
     program: RinAst,
-    module_path: &'a Path,
 }
 
-impl<'a> RinCompiler<'a> {
-    pub fn new(tokens: Vec<WithLocation<RinToken>>, module_path: &'a Path) -> Self {
+impl RinCompiler {
+    pub fn new(tokens: Vec<WithLocation<RinToken>>) -> Self {
         Self {
             base: CompilerBase::new(tokens),
             program: RinAst::default(),
-            module_path,
         }
     }
 
-    pub fn program(&self) -> &RinAst {
+    pub fn ast(&self) -> &RinAst {
         return &self.program;
     }
 
-    pub fn generate(&self) -> Result<String, GeneratorError> {
-        let generator = Generator::new();
-        return generator.generate(&self.program, self.module_path);
+    pub fn ast_owned(self) -> RinAst {
+        return self.program;
     }
 
     pub fn parse(&mut self) -> Result<(), CompilerError<RinToken>> {
@@ -158,10 +149,6 @@ impl<'a> RinCompiler<'a> {
                     Keyword::Import => {
                         let import = self.parse_imports()?;
                         self.program.imports.push(import);
-                    }
-                    Keyword::Module => {
-                        let module = self.parse_module()?;
-                        self.program.module.push(module);
                     }
                     Keyword::Procedure => {
                         let proc = self.parse_proc()?;
@@ -501,14 +488,7 @@ impl<'a> RinCompiler<'a> {
         self.base.expect_token(RinToken::Keyword(Keyword::Import))?;
         let path = self.parse_path()?;
         self.base.expect_token(RinToken::Semicolon)?;
-        return Ok(Import { path: path.value });
-    }
-
-    fn parse_module(&mut self) -> Result<Module, CompilerError<RinToken>> {
-        self.base.expect_token(RinToken::Keyword(Keyword::Module))?;
-        let name = self.parse_identifier()?;
-        self.base.expect_token(RinToken::Semicolon)?;
-        return Ok(Module { name: name.value });
+        return Ok(Import { path });
     }
 
     fn parse_path(&mut self) -> Result<WithLocation<Path>, CompilerError<RinToken>> {
@@ -595,6 +575,31 @@ impl<'a> RinCompiler<'a> {
     }
 }
 
+impl RinAst {
+    pub fn procedures_iter(&self) -> slice::Iter<'_, WithLocation<Procedure>> {
+        self.procedures.iter()
+    }
+}
+
+impl Procedure {
+    pub fn to_header(&self, path: Path) -> ProcedureHeader {
+        ProcedureHeader {
+            callable_path: path.clone().join(Path::new(&*self.name)),
+            real_path: path.join(Path::new(&*self.name)),
+            parameters: self
+                .parameters
+                .iter()
+                .map(|e| e.param_type.clone())
+                .collect(),
+            return_type: self.return_type.value,
+        }
+    }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+}
+
 impl Path {
     pub fn new<T: AsRef<str>>(value: T) -> Self {
         Self {
@@ -610,6 +615,31 @@ impl Path {
                 .chain(other.path.into_iter())
                 .collect::<Vec<String>>(),
         }
+    }
+
+    pub fn import(self, other: Self) -> Self {
+        let set: HashSet<_> = other.path.iter().collect();
+
+        let last_match = self
+            .path
+            .iter()
+            .rev()
+            .find(|item| set.contains(item))
+            .cloned();
+
+        let mut result = Vec::new();
+        let mut last_match_found = false;
+
+        for item in self.path {
+            if !set.contains(&item) {
+                result.push(item);
+            } else if Some(&item) == last_match.as_ref() && !last_match_found {
+                result.push(item.clone());
+                last_match_found = true;
+            }
+        }
+
+        Self { path: result }
     }
 
     pub fn parse(&self) -> String {

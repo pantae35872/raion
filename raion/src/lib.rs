@@ -3,7 +3,8 @@
 use std::{
     fmt::Display,
     ops::{Deref, DerefMut},
-    path::PathBuf,
+    path::Path,
+    sync::Arc,
 };
 
 pub mod compiler;
@@ -18,9 +19,9 @@ pub struct WithLocation<T> {
     location: Location,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Location {
-    file: PathBuf,
+    file: Arc<Path>,
     row: usize,
     column: usize,
 }
@@ -68,7 +69,7 @@ impl<T: Clone> Clone for WithLocation<T> {
 }
 
 impl Location {
-    pub fn new(row: usize, column: usize, file: PathBuf) -> Self {
+    pub fn new(row: usize, column: usize, file: Arc<Path>) -> Self {
         Self { column, row, file }
     }
 
@@ -80,8 +81,8 @@ impl Location {
         self.column
     }
 
-    pub fn file(&self) -> &PathBuf {
-        &self.file
+    pub fn file(&self) -> &Path {
+        self.file.as_ref()
     }
 }
 

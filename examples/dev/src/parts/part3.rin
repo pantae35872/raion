@@ -1,0 +1,10 @@
+import dev.parts.sum;
+
+proc part(): u32 -> {
+  let k = 11u32;
+  let l = 12u32;
+  let m = 13u32;
+  let n = 14u32;
+  let o = 15u32;
+  return sum(k, l, m, n, o);
+}

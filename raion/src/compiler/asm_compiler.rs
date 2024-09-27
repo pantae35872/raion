@@ -22,7 +22,7 @@ use super::{CompilerBase, CompilerError};
 
 mod argument_parser;
 
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct LabelReplace {
     label: String,
     pos: usize,

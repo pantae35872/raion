@@ -1,7 +1,7 @@
 use std::{collections::HashMap, error::Error, fmt::Display};
 
 use block_generator::{BlockGenerator, ReturnDestion};
-use common::{register::RegisterType, VecUtils};
+use common::register::RegisterType;
 
 use crate::{error::ErrorGenerator, WithLocation};
 
@@ -14,6 +14,7 @@ mod block_generator;
 pub enum GeneratorError<'a> {
     UndefinedVariable(&'a WithLocation<String>),
     UndefinedProcedure(&'a WithLocation<Path>),
+    UndefinedModule(&'a WithLocation<Path>),
     UnexpectedType {
         expected: WithLocation<Type>,
         unexpected: WithLocation<Type>,
@@ -59,6 +60,24 @@ impl<'a> Display for GeneratorError<'a> {
                 .pointer(location.row, "", '^', color_red)?
                 .build()
             ),
+            Self::UndefinedModule(WithLocation {
+                value: module,
+                location,
+            }) => write!(
+                f,
+                "{}",
+                ErrorGenerator::new(
+                    location,
+                    format!("{style_bold}Import of an undefined module `{module}`{style_reset}"),
+                    location.column.to_string().len()
+                )
+                .vertical_pipe(format!("{}", location.column))?
+                .write_line(location.column)?
+                .new_line()?
+                .vertical_pipe("")?
+                .pointer(location.row, "", '^', color_red)?
+                .build()
+            ),
             Self::UnexpectedType {
                 expected:
                     WithLocation {
@@ -71,7 +90,9 @@ impl<'a> Display for GeneratorError<'a> {
                         location: unexpected_location,
                     },
             } => {
-                if location.column() == unexpected_location.column() {
+                if location.column() == unexpected_location.column()
+                    && location.file() == unexpected_location.file()
+                {
                     write!(f, "{}", ErrorGenerator::new(
                         unexpected_location,
                         format!("{style_bold}Unexpected type. expected `{expected}` found `{unexpected}`{style_reset}"),
@@ -108,7 +129,7 @@ impl<'a> Display for GeneratorError<'a> {
                         .pointer(unexpected_location.row, format!(" expected `{expected}`, found `{unexpected}`"), '^', color_red)?
                         .new_line()?
                         .vertical_pipe(format!("{}", location.column))?
-                        .write_line(location.column)?
+                        .write_line_file(location.column, location.file())?
                         .new_line()?
                         .vertical_pipe("")?
                         .pointer(location.row, "", '^', color_blue)?
@@ -124,13 +145,13 @@ impl<'a> Display for GeneratorError<'a> {
     }
 }
 
-impl<'a> Error for GeneratorError<'a> {}
+impl Error for GeneratorError<'_> {}
 
 type Variables = HashMap<String, Variable>;
 
 pub struct Generator {
     output: String,
-    callable_procs: Vec<ProcHeader>,
+    callable_procs: Vec<ProcedureHeader>,
 }
 
 struct ProcGenerator<'a> {
@@ -138,14 +159,15 @@ struct ProcGenerator<'a> {
     variables: Variables,
     body: String,
     constants: String,
-    callable_procs: &'a Vec<ProcHeader>,
+    callable_procs: &'a Vec<ProcedureHeader>,
 }
 
-struct ProcHeader {
-    callable_path: Path,
-    real_path: Path,
-    parameters: Vec<WithLocation<Type>>,
-    return_type: Type,
+#[derive(Debug, Clone)]
+pub struct ProcedureHeader {
+    pub callable_path: Path,
+    pub real_path: Path,
+    pub parameters: Vec<WithLocation<Type>>,
+    pub return_type: Type,
 }
 
 #[derive(Clone)]
@@ -172,23 +194,59 @@ impl Generator {
         mut self,
         ast: &'a RinAst,
         package_path: &Path,
+        importable_procs: &'a Vec<ProcedureHeader>,
     ) -> Result<String, GeneratorError<'a>> {
-        self.output.push_str(&format!(
-            "proc start -> {{\n   call {package_path}$main\n   exit a64\n}}\n"
-        ));
         for procedure in ast.procedures.iter() {
             let param_type = procedure
                 .parameters
                 .iter()
                 .map(|e| e.param_type.clone())
                 .collect();
-            self.callable_procs.push(ProcHeader {
+            self.callable_procs.push(ProcedureHeader {
                 real_path: package_path.clone().join(Path::new(&procedure.name.value)),
                 callable_path: Path::new(&procedure.name.value),
                 parameters: param_type,
                 return_type: *procedure.return_type,
             });
         }
+
+        self.callable_procs.extend(importable_procs.clone());
+
+        let mut imported_procs = Vec::new();
+        for import in &ast.imports {
+            let mut exists = false;
+            self.callable_procs.iter().for_each(|procs| {
+                if import.path.path.len() > procs.callable_path.path.len() {
+                    return;
+                }
+
+                if procs
+                    .callable_path
+                    .path
+                    .iter()
+                    .enumerate()
+                    .all(|(i, e)| import.path.path.get(i).is_none_or(|ee| ee == e))
+                {
+                    imported_procs.push(ProcedureHeader {
+                        callable_path: procs
+                            .callable_path
+                            .clone()
+                            .import(import.path.value.clone()),
+                        real_path: procs.real_path.clone(),
+                        parameters: procs.parameters.clone(),
+                        return_type: procs.return_type,
+                    });
+                    exists = true;
+                }
+            });
+
+            if !exists {
+                return Err(GeneratorError::UndefinedModule(&import.path));
+            }
+        }
+
+        self.callable_procs.extend(imported_procs);
+
         for (procedure, header) in ast.procedures.iter().zip(self.callable_procs.iter()) {
             let proc_gen = ProcGenerator::new(&self.callable_procs);
             self.output.push_str(&proc_gen.gen_proc(procedure, header)?);
@@ -198,7 +256,7 @@ impl Generator {
 }
 
 impl<'a> ProcGenerator<'a> {
-    fn new(callable_procs: &'a Vec<ProcHeader>) -> Self {
+    fn new(callable_procs: &'a Vec<ProcedureHeader>) -> Self {
         Self {
             stack_loc: 0,
             variables: HashMap::new(),
@@ -211,7 +269,7 @@ impl<'a> ProcGenerator<'a> {
     fn gen_proc<'b>(
         mut self,
         proc: &'b Procedure,
-        header: &ProcHeader,
+        header: &ProcedureHeader,
     ) -> Result<String, GeneratorError<'b>> {
         self.gen_argument(&proc.parameters);
         let (return_type, generated) =

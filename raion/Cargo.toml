@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 inline_colorization = "0.1.6"
+toml = "0.8.19"
 
 [dependencies.common]
 path = "../common"

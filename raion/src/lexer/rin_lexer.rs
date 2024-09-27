@@ -1,4 +1,4 @@
-use std::{path::Path, str::FromStr};
+use std::{path::Path, str::FromStr, sync::Arc};
 
 use crate::{
     token::rin_token::{Keyword, Operator, PrimitiveType, RinToken},
@@ -12,7 +12,7 @@ pub struct RinLexer<'a> {
 }
 
 impl<'a> RinLexer<'a> {
-    pub fn new(buffer: &'a str, file: &'a Path) -> Self {
+    pub fn new(buffer: &'a str, file: Arc<Path>) -> Self {
         Self {
             base: LexerBase::new(buffer, file),
         }

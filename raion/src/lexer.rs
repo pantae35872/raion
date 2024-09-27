@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display, num::ParseIntError, path::Path};
+use std::{error::Error, fmt::Display, num::ParseIntError, path::Path, sync::Arc};
 
 use crate::{error::ErrorGenerator, token::Token, Location, WithLocation};
 use inline_colorization::*;
@@ -88,20 +88,20 @@ pub struct LexerBase<'a, T: Token> {
     row: usize,
     column: usize,
     tokens: Vec<WithLocation<T>>,
-    file: &'a Path,
+    file: Arc<Path>,
     saved_location: Location,
 }
 
 impl<'a, T: Token> LexerBase<'a, T> {
-    pub fn new(buffer: &'a str, file: &'a Path) -> Self {
+    pub fn new(buffer: &'a str, file: Arc<Path>) -> Self {
         Self {
             buffer,
             index: 0,
-            row: 0,
+            row: 1,
             column: 1,
             tokens: Vec::new(),
+            saved_location: Location::new(0, 0, file.clone()),
             file,
-            saved_location: Location::default(),
         }
     }
 
@@ -171,7 +171,7 @@ impl<'a, T: Token> LexerBase<'a, T> {
     }
 
     fn save_location(&mut self) {
-        self.saved_location = Location::new(self.row, self.column, self.file.to_path_buf());
+        self.saved_location = Location::new(self.row, self.column, self.file.clone());
     }
 
     fn parse_interger(&mut self) -> Result<(), LexerError> {
@@ -291,7 +291,7 @@ impl<'a, T: Token> LexerBase<'a, T> {
             }
 
             if self.peek(0).is_some_and(|e| e == '\\') {
-                let location = Location::new(self.row, self.column, self.file.to_path_buf());
+                let location = Location::new(self.row, self.column, self.file.clone());
                 self.consume();
                 match self.consume().ok_or(LexerError::EndOfBuffer)? {
                     'b' => buffer.push('\u{08}'),
