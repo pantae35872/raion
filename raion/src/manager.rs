@@ -156,7 +156,8 @@ impl<'a, 'b> CompilerManager<'a, 'b> {
     pub fn generate(&mut self) -> Result<(), String> {
         let generated_asm = self.generate_asm()?;
         if !self.build_dir.exists() {
-            fs::create_dir(&self.build_dir).map_err(|e| format!("can't create build directory"))?;
+            fs::create_dir(&self.build_dir)
+                .map_err(|e| format!("can't create build directory: {e}"))?;
         }
         let out_asm = self.build_dir.join("out.asm");
         if Path::new(&out_asm).exists() {
