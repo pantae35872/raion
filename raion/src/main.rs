@@ -96,13 +96,13 @@ fn main() -> ExitCode {
         .new_command(Command::new(
             "compile",
             "compile the provided rin file",
-            "<sin file>",
+            "<rin file>",
             command_compile,
         ))
         .new_command(Command::new(
             "compile-emit-asm",
             "compile the provided sin file and emit asm",
-            "<sin file>",
+            "<rin file>",
             command_compile_emit_asm,
         ))
         .run();
