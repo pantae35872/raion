@@ -13,6 +13,7 @@ pub enum PrimitiveType {
     I32,
     I64,
     Bool,
+    Void,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,7 +51,6 @@ pub enum RinToken {
     LRoundBracket,
     RRoundBracket,
     Colon,
-    Arrow,
 }
 
 impl Token for RinToken {
@@ -90,7 +90,6 @@ impl Display for RinToken {
             Self::Equals => write!(f, "Equals token"),
             Self::Comma => write!(f, "Comma token"),
             Self::Colon => write!(f, "Colon token"),
-            Self::Arrow => write!(f, "Arrow token"),
         }
     }
 }
@@ -131,6 +130,7 @@ impl Display for PrimitiveType {
             Self::I16 => write!(f, "signed 16 bit interger"),
             Self::I32 => write!(f, "signed 32 bit interger"),
             Self::I64 => write!(f, "signed 64 bit interger"),
+            Self::Void => write!(f, "void"),
         }
     }
 }
@@ -150,6 +150,7 @@ impl FromStr for PrimitiveType {
             "i16" => Ok(Self::I16),
             "i32" => Ok(Self::I32),
             "i64" => Ok(Self::I64),
+            "void" => Ok(Self::Void),
             "bool" => Ok(Self::Bool),
             _ => Err(InvalidType),
         }

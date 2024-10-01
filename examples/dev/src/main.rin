@@ -3,7 +3,7 @@ import dev.parts.part2;
 import dev.parts.part3;
 import dev.parts.part4;
 
-proc main(): u32 -> {
+proc main(): u32 = {
   let result1 = part1.part();
   let result2 = part2.part();
   let result3 = part3.part();

@@ -55,6 +55,7 @@ impl<'a> BlockGenerator<'a> {
             location,
         } = block;
         let mut return_type = WithLocation::new(Type::Void, location.clone());
+        let mut have_return = false;
         for statement in block.body.iter() {
             if let Some(stmt_type) = self.gen_statement(statement, &return_dst)? {
                 if return_type.value != Type::Void && return_type.value != *stmt_type {
@@ -64,7 +65,24 @@ impl<'a> BlockGenerator<'a> {
                     });
                 }
                 return_type = stmt_type;
+                have_return = true;
             }
+        }
+        if !have_return {
+            match return_dst {
+                ReturnDestion::Register(reg) => {
+                    self.add_instruction(format!("mov {}, 0", reg));
+                }
+                ReturnDestion::Return => {
+                    self.add_instruction(format!("mov a64, 0"));
+                    self.add_instruction("ret");
+                }
+                ReturnDestion::LeaveReturn => {
+                    self.add_instruction(format!("mov a64, 0"));
+                    self.add_instruction("leave");
+                    self.add_instruction("ret");
+                }
+            };
         }
         return Ok((return_type, self.body));
     }
@@ -72,7 +90,7 @@ impl<'a> BlockGenerator<'a> {
     fn gen_statement<'b>(
         &mut self,
         statement: &'b Statement,
-        return_type: &ReturnDestion,
+        return_dst: &ReturnDestion,
     ) -> Result<Option<WithLocation<Type>>, GeneratorError<'b>> {
         match statement {
             Statement::VariableDecl { name, value } => {
@@ -104,7 +122,7 @@ impl<'a> BlockGenerator<'a> {
                 self.add_instruction(format!("mov [sp + {stack_loc}], a{bits}"));
             }
             Statement::Return(expr) => {
-                let return_type = match return_type {
+                let return_type = match return_dst {
                     ReturnDestion::Register(reg) => {
                         let typ =
                             self.gen_expression(expr, ExpressionDestination::Register(*reg), &[])?;
@@ -214,10 +232,11 @@ impl<'a> BlockGenerator<'a> {
         name: &'b WithLocation<String>,
         dst: ExpressionDestination,
     ) -> Result<WithLocation<Type>, GeneratorError<'b>> {
+        let WithLocation { location, .. } = name;
         let variable = self.get_variable(name)?;
-        let var_type = variable.var_type.clone();
-        self.gen_variable_load_instruction(variable, dst, var_type.value.clone())?;
-        Ok(var_type)
+        let var_type = variable.var_type.value;
+        self.gen_variable_load_instruction(variable, dst, var_type)?;
+        Ok(WithLocation::new(var_type, location.clone()))
     }
 
     fn gen_variable_load_instruction<'b>(

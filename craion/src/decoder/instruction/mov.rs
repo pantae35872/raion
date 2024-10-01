@@ -19,8 +19,10 @@ pub fn mov(args: &mut InstructionArgument) -> Result<(), super::InstructionError
     args.register.inc_ip(args.instruction_length);
     match args.argument.parse_u8()? {
         MOV_REG2REG => {
+            let dst = args.argument.parse_register()?;
+            args.register.reset_group(&dst.group());
             args.register.set_general(
-                &args.argument.parse_register()?,
+                &dst,
                 args.register
                     .get_general(&args.argument.parse_register()?)?,
             )?;
@@ -50,6 +52,7 @@ pub fn mov(args: &mut InstructionArgument) -> Result<(), super::InstructionError
         }
         MOV_NUM2REG => {
             let reg = args.argument.parse_register()?;
+            args.register.reset_group(&reg.group());
             args.register.set_general(
                 &reg,
                 match reg.size() {

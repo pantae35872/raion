@@ -1,6 +1,6 @@
 import dev.parts.sum;
 
-proc part(): u32 -> {
+proc part(): u32 = {
   let a = 1u32;
   let b = 2u32;
   let c = 3u32;

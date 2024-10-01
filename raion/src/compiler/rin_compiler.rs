@@ -176,7 +176,7 @@ impl RinCompiler {
         let params = self.parse_parameters()?;
         self.base.expect_token(RinToken::Colon)?;
         let return_type = self.parse_type()?;
-        self.base.expect_token(RinToken::Arrow)?;
+        self.base.expect_token(RinToken::Equals)?;
         let block = self.parse_block()?;
         return Ok(Procedure {
             name,
@@ -706,6 +706,7 @@ impl From<PrimitiveType> for Type {
             PrimitiveType::I16 => Self::I16,
             PrimitiveType::I32 => Self::I32,
             PrimitiveType::I64 => Self::I64,
+            PrimitiveType::Void => Self::Void,
         }
     }
 }

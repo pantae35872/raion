@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Display};
 
-use common::register::RegisterType;
+use common::register::{RegisterType, RegisterTypeGroup};
 
 use crate::memory::address::Address;
 
@@ -137,6 +137,18 @@ impl RegisterFile {
     /// Increment 'ip' by perfered value and return increased 'ip'
     pub fn inc_ip(&mut self, amount: usize) {
         self.ip += amount;
+    }
+
+    pub fn reset_group(&mut self, group: &RegisterTypeGroup) {
+        match group {
+            RegisterTypeGroup::A => self.a = 0,
+            RegisterTypeGroup::B => self.b = 0,
+            RegisterTypeGroup::C => self.c = 0,
+            RegisterTypeGroup::D => self.d = 0,
+            RegisterTypeGroup::Ip => self.ip = 0u64.into(),
+            RegisterTypeGroup::Sp => self.sp = 0u64.into(),
+            RegisterTypeGroup::Flags => self.flags = Flags::empty(),
+        }
     }
 
     pub fn set_general(

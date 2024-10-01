@@ -1,10 +1,10 @@
-proc sum(u32 num1, u32 num2, u32 num3, u32 num4, u32 num5): u32 -> {
+proc sum(u32 num1, u32 num2, u32 num3, u32 num4, u32 num5): u32 = {
   let result = num1 + num2 + num3 + num4 + num5;
   let modified_result = modify_result(result);
   return modified_result;
 }
 
-proc modify_result(u32 input): u32 -> {
+proc modify_result(u32 input): u32 = {
   let x = input * 2u32;
   x = x + 10u32;
   x = x / 3u32;
@@ -12,6 +12,6 @@ proc modify_result(u32 input): u32 -> {
   return x;
 }
 
-proc extra_modifier(): u32 -> {
+proc extra_modifier(): u32 = {
   return 7u32;
 }

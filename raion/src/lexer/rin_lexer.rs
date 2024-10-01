@@ -27,12 +27,6 @@ impl<'a> RinLexer<'a> {
                     .consume_while(&mut String::new(), |e| e != '\n', |_| false);
                 continue;
             }
-            if self.base.peek_match("->") {
-                self.base.save_location();
-                self.base.consumes(2);
-                self.base.push(RinToken::Arrow);
-                continue;
-            }
             if value.is_alphabetic() {
                 self.base.save_location();
                 self.base.consume_while(
