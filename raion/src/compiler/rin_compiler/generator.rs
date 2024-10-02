@@ -5,7 +5,7 @@ use common::register::RegisterType;
 
 use crate::{error::ErrorGenerator, WithLocation};
 
-use super::{Parameter, Path, Procedure, RinAst, Type};
+use super::{Expression, Parameter, Path, Procedure, RinAst, Type};
 use inline_colorization::*;
 
 mod block_generator;
@@ -15,6 +15,14 @@ pub enum GeneratorError<'a> {
     UndefinedVariable(&'a WithLocation<String>),
     UndefinedProcedure(&'a WithLocation<Path>),
     UndefinedModule(&'a WithLocation<Path>),
+    TooMuchArguments(
+        &'a WithLocation<Path>,
+        &'a WithLocation<Expression>,
+        usize,
+        usize,
+        usize,
+    ),
+    TooFewArguemnts(&'a WithLocation<Path>, usize, usize, usize),
     UnexpectedType {
         expected: WithLocation<Type>,
         unexpected: WithLocation<Type>,
@@ -78,6 +86,80 @@ impl<'a> Display for GeneratorError<'a> {
                 .pointer(location.row, "", '^', color_red)?
                 .build()
             ),
+            Self::TooMuchArguments(
+                WithLocation {
+                    location: proc_location,
+                    ..
+                },
+                WithLocation {
+                    location: arg_location,
+                    ..
+                },
+                args_len,
+                param_len,
+                unexpected,
+            ) => {
+                if proc_location.column() == arg_location.column()
+                    && proc_location.file() == arg_location.file()
+                {
+                    write!(f, "{}", ErrorGenerator::new(
+                        proc_location,
+                        format!("{style_bold}Too much arguments. Expected {param_len} arguments but found {args_len} arguments{style_reset}"),
+                        proc_location
+                            .column
+                            .to_string()
+                            .len()
+                        )
+                        .vertical_pipe(format!("{}", proc_location.column))?
+                        .write_line(proc_location.column)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(proc_location.row, "", '^', color_blue)?
+                        .pointer(arg_location.row - proc_location.row - 1, format!(" Unexpected argument #{unexpected}"), '^', color_red)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(proc_location.row, "", '|', color_blue)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .ident_string(proc_location.row, format!("Takes {param_len} arguments."), color_blue)?
+                    .build())
+                } else {
+                    write!(f, "{}", ErrorGenerator::new(
+                        arg_location, 
+                        format!("{style_bold}Too much arguments. Expected {param_len} arguments but found {args_len} arguments{style_reset}"),
+                        proc_location.column.to_string().len().max(arg_location.column.to_string().len()))
+                        .vertical_pipe(format!("{}", arg_location.column))?
+                        .write_line(arg_location.column)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(arg_location.row, format!(" Unexpected argument #{unexpected}`"), '^', color_red)?
+                        .new_line()?
+                        .vertical_pipe(proc_location.column.to_string())?
+                        .write_line(proc_location.column)?
+                        .new_line()?
+                        .vertical_pipe("")?
+                        .pointer(proc_location.row, format!(" Takes {param_len} arguments."), '^', color_blue)?
+                        .build()
+                    )
+                }
+            }
+            Self::TooFewArguemnts(WithLocation {
+                value: _proc,
+                location,
+            }, args_len, param_len, missing) => 
+                write!(f, "{}", ErrorGenerator::new(
+                    location,
+                    format!("{style_bold}Too few arguments. Expected {param_len} arguments but found {args_len} arguments{style_reset}"),
+                    location
+                        .column
+                        .to_string()
+                        .len()
+                    )
+                    .vertical_pipe(format!("{}", location.column))?
+                    .write_line(location.column)?
+                    .new_line()?
+                    .vertical_pipe("")?
+                    .pointer(location.row, format!(" argument #{missing} is missing"), '^', color_red)?.build()),
             Self::UnexpectedType {
                 expected:
                     WithLocation {

@@ -2,6 +2,7 @@ import dev.parts.part1;
 import dev.parts.part2;
 import dev.parts.part3;
 import dev.parts.part4;
+import dev.parts.sum;
 
 proc main(): u32 = {
   let result1 = part1.part();

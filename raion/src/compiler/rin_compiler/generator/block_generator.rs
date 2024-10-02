@@ -366,21 +366,48 @@ impl<'a> BlockGenerator<'a> {
             .find(|e| e.callable_path == path.value)
             .ok_or(GeneratorError::UndefinedProcedure(path))?;
         let WithLocation { location, .. } = path;
-        // TODO: Check for parameter length
         self.preserve_registers(preserved_registers, &[RegisterTypeGroup::A]);
-        for (i, (expr, param_type)) in args.iter().zip(proc.parameters.iter()).enumerate() {
-            let expr_type = self.gen_expression(
-                expr,
-                ExpressionDestination::Register(RegisterType::A64),
-                &[],
-            )?;
-            if expr_type.value != param_type.value {
-                return Err(GeneratorError::UnexpectedType {
-                    expected: param_type.clone(),
-                    unexpected: expr_type,
-                });
+        for (i, (expr, param_type)) in args
+            .iter()
+            .map(|p| Some(p))
+            .chain(std::iter::once(None))
+            .zip(
+                proc.parameters
+                    .iter()
+                    .map(|p| Some(p))
+                    .chain(std::iter::once(None)),
+            )
+            .enumerate()
+        {
+            if let (Some(expr), Some(param_type)) = (expr, param_type) {
+                let expr_type = self.gen_expression(
+                    expr,
+                    ExpressionDestination::Register(RegisterType::A64),
+                    &[],
+                )?;
+                if expr_type.value != param_type.value {
+                    return Err(GeneratorError::UnexpectedType {
+                        expected: param_type.clone(),
+                        unexpected: expr_type,
+                    });
+                }
+                self.add_instruction(format!("arg {i}, a64"));
+            } else if let (Some(expr), None) = (expr, param_type) {
+                return Err(GeneratorError::TooMuchArguments(
+                    path,
+                    expr,
+                    args.len(),
+                    proc.parameters.len(),
+                    i + 1,
+                ));
+            } else if let (None, Some(_)) = (expr, param_type) {
+                return Err(GeneratorError::TooFewArguemnts(
+                    path,
+                    args.len(),
+                    proc.parameters.len(),
+                    i + 1,
+                ));
             }
-            self.add_instruction(format!("arg {i}, a64"));
         }
         self.add_instruction(format!("call {}", proc.real_path.parse()));
         let proc_return_type = self.finalize_expression_result(dst, proc.return_type)?;
