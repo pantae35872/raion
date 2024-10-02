@@ -14,7 +14,7 @@ use crate::memory::address::Address;
 
 use super::{InstructionArgument, InstructionError};
 
-#[instruction(MOV_OPCODE)]
+#[instruction(MOV_OPCODE, "crate::decoder::instruction::mov::mov")]
 pub fn mov(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     match args.argument.parse_u8()? {

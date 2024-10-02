@@ -1,45 +1,56 @@
 use std::sync::Mutex;
 
 use proc_macro::TokenStream;
+use proc_macro2::{Punct, TokenTree};
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input,
+    parse_macro_input, parse_str,
     punctuated::Punctuated,
-    Expr, Ident, ItemFn, Token,
+    Expr, Ident, ItemFn, LitStr, Path, Token,
 };
 
 extern crate proc_macro;
 
 struct Instruction {
-    fn_name: String,
+    fn_path: String,
     op_code: String,
 }
 
 static INSTRUCTIONS: Mutex<Vec<Instruction>> = Mutex::new(Vec::new());
 
+impl Parse for Instruction {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let op_code = Ident::parse(input)?;
+        input.step(
+            |cursor| match cursor.token_tree().ok_or(cursor.error("Expected `,`"))? {
+                (TokenTree::Punct(punct), next) => match punct.to_string().as_str() {
+                    "," => return Ok(((), next)),
+                    unexpected => {
+                        return Err(cursor.error(format!("Expected `,` found `{unexpected}`")))
+                    }
+                },
+                (unexpected, ..) => Err(cursor.error(format!("Expected `,` found `{unexpected}`"))),
+            },
+        )?;
+
+        let fn_path: LitStr = Parse::parse(input)?;
+        let fn_path = fn_path.parse::<Path>()?;
+
+        Ok(Instruction {
+            fn_path: quote!(#fn_path).to_string(),
+            op_code: op_code.to_string(),
+        })
+    }
+}
+
 #[proc_macro_attribute]
 pub fn instruction(args: TokenStream, input: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(input as ItemFn);
-    let opcode_expr = parse_macro_input!(args as Expr);
-    let opcode = match opcode_expr {
-        Expr::Lit(expr_lit) => {
-            if let syn::Lit::Int(lit_int) = expr_lit.lit {
-                lit_int
-                    .base10_parse::<u16>()
-                    .expect("Expected a u16 literal for the opcode")
-                    .to_string() // Convert literal to a string for storage
-            } else {
-                panic!("Expected a u16 literal for the opcode");
-            }
-        }
-        _ => quote!(#opcode_expr).to_string(), // Store the constant name or expression as a string
-    };
-    let fn_name = input_fn.sig.ident.to_string();
-    INSTRUCTIONS.lock().unwrap().push(Instruction {
-        fn_name,
-        op_code: opcode,
-    });
+    INSTRUCTIONS
+        .lock()
+        .unwrap()
+        .push(parse_macro_input!(args as Instruction));
     quote!(#input_fn).into()
 }
 
@@ -71,12 +82,12 @@ pub fn collect_instruction(args: TokenStream) -> TokenStream {
         .iter()
         .map(|instruction| {
             let opcode_ts = syn::Ident::new(&instruction.op_code, proc_macro2::Span::call_site());
-            let instruction_ts =
-                syn::Ident::new(&instruction.fn_name, proc_macro2::Span::call_site());
+            let instruction_ts: Path =
+                parse_str(&instruction.fn_path).expect("Failed to parse path");
             quote! {
                 common::constants::#opcode_ts => {
                     return Ok(Self {
-                        instruction_executor: #instruction_ts::#instruction_ts,
+                        instruction_executor: #instruction_ts,
                         instruction_argument: InstructionArgument {
                             register: #register_var,
                             memory: #memory_var,

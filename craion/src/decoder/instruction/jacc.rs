@@ -2,7 +2,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(JACC_OPCODE)]
+#[instruction(JACC_OPCODE, "crate::decoder::instruction::jacc::jacc")]
 pub fn jacc(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     let reg1 = args.argument.parse_register()?;
     let reg2 = args.argument.parse_register()?;

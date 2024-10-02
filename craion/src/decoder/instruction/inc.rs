@@ -2,7 +2,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(INC_OPCODE)]
+#[instruction(INC_OPCODE, "crate::decoder::instruction::inc::inc")]
 pub fn inc(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     let reg = args.argument.parse_register()?;

@@ -3,7 +3,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(PUSH_OPCODE)]
+#[instruction(PUSH_OPCODE, "crate::decoder::instruction::push::push")]
 pub fn push(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     let reg = args.argument.parse_register()?;

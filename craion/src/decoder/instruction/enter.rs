@@ -2,7 +2,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(ENTER_OPCODE)]
+#[instruction(ENTER_OPCODE, "crate::decoder::instruction::enter::enter")]
 pub fn enter(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     let size = args.argument.parse_u64()?;

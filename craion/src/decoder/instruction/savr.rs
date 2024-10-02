@@ -3,7 +3,7 @@ use proc::instruction;
 
 use super::{InstructionArgument, InstructionError};
 
-#[instruction(SAVR_OPCODE)]
+#[instruction(SAVR_OPCODE, "crate::decoder::instruction::savr::savr")]
 pub fn savr(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
 

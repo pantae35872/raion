@@ -2,7 +2,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(MUL_OPCODE)]
+#[instruction(MUL_OPCODE, "crate::decoder::instruction::mul::mul")]
 pub fn mul(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     let reg1 = args.argument.parse_register()?;

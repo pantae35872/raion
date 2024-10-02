@@ -3,7 +3,7 @@ use proc::instruction;
 
 use super::{InstructionArgument, InstructionError};
 
-#[instruction(RESTR_OPCODE)]
+#[instruction(RESTR_OPCODE, "crate::decoder::instruction::restr::restr")]
 pub fn restr(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
 

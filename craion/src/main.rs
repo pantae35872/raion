@@ -19,7 +19,8 @@ fn command_run(_command_name: &str, args: &mut env::Args) -> Result<(), String> 
     let file = args.next().ok_or("no sin file is provided".to_string())?;
     let mut sin = File::open(&file).map_err(|e| format!("couldn't read {file}: {e}"))?;
     let mut buf = Vec::new();
-    sin.read_to_end(&mut buf).unwrap();
+    sin.read_to_end(&mut buf)
+        .map_err(|e| format!("failed to read {file}: {e}"))?;
     let sin =
         Sin::from_bytes(&buf).map_err(|e| format!("couldn't parse the provided sin file: {e}"))?;
     for section in sin.sections() {

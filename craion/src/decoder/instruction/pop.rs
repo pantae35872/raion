@@ -3,7 +3,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(POP_OPCODE)]
+#[instruction(POP_OPCODE, "crate::decoder::instruction::pop::pop")]
 pub fn pop(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     let reg = args.argument.parse_register()?;

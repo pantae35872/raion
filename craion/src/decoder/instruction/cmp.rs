@@ -2,7 +2,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(CMP_OPCODE)]
+#[instruction(CMP_OPCODE, "crate::decoder::instruction::cmp::cmp")]
 pub fn cmp(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     let reg1 = args.argument.parse_register()?;

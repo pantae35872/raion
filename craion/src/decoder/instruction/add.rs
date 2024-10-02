@@ -5,7 +5,7 @@ use crate::memory::address::Address;
 
 use super::InstructionArgument;
 
-#[instruction(ADD_OPCODE)]
+#[instruction(ADD_OPCODE, "crate::decoder::instruction::add::add")]
 pub fn add(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
 

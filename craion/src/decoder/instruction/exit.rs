@@ -2,7 +2,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(EXIT_OPCODE)]
+#[instruction(EXIT_OPCODE, "crate::decoder::instruction::exit::exit")]
 pub fn exit(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     args.register.set_halt(true);

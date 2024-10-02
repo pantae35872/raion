@@ -3,7 +3,7 @@ use proc::instruction;
 
 use super::{InstructionArgument, InstructionError};
 
-#[instruction(CALL_OPCODE)]
+#[instruction(CALL_OPCODE, "crate::decoder::instruction::call::call")]
 pub fn call(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     let procedure_hash = args.argument.parse_u64()?;
     args.register.inc_ip(args.instruction_length);

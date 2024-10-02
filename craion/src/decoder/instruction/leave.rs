@@ -2,7 +2,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(LEAVE_OPCODE)]
+#[instruction(LEAVE_OPCODE, "crate::decoder::instruction::leave::leave")]
 pub fn leave(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     let size = args.executor_state.consume_stack_size();

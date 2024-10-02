@@ -2,7 +2,7 @@ use proc::instruction;
 
 use super::InstructionArgument;
 
-#[instruction(OUTC_OPCODE)]
+#[instruction(OUTC_OPCODE, "crate::decoder::instruction::outc::outc")]
 pub fn outc(args: &mut InstructionArgument) -> Result<(), super::InstructionError> {
     args.register.inc_ip(args.instruction_length);
     let reg = args.argument.parse_register()?;
