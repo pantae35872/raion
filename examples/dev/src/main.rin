@@ -3,8 +3,117 @@ import dev.parts.part2;
 import dev.parts.part3;
 import dev.parts.part4;
 import dev.parts.sum;
+public interface Test2 {
+  static proc getn(u32 aa): u32;
+  proc ggg(): u32;
+}
 
-proc main(): u32 = {
+struct Test  {
+  aaa: u32;
+  bbb: u32;
+
+  public static proc new(u32 aaa, u32 bbb): Test {
+    return Test {
+      aaa: aaa,
+      bbb: bbb,
+    };
+  }
+
+  implements Test2 { 
+    static proc getn(u32 aa): u32 {
+      return aa + 10u32;
+    }
+    proc ggg(): u32 {
+      return 10u32;
+    }
+  }
+
+  public proc increase(): void {
+    this.aaa += 10;
+  }
+
+  public static proc another_static(): u32 {
+    return 10u32;
+  }
+
+  public static proc aaa(u32 aaa): u32 {
+    //this.to_string(); Invalid the method is static 
+    this::another_static(); // Static method call
+    Test::another_static(); // Also valid
+    return 10u32;
+  }
+
+  public static proc dynamic(ToString to_stringable): u32 {
+    to_stringable.to_string();
+    let generic_struc
+    return 20u32;
+  }
+
+  public static proc static_dynamic(Test2 abc): void {
+    abc::getn();
+  }
+}
+
+struct Genericstruct<T> {
+  aaa: T;
+
+  public static proc new(T aaa): Genericstruct 
+    when T: ToString {
+    return Genericstruct {
+      aaa: aaa
+    };
+  }
+
+  implements ToString when T: ToString {
+    proc to_string(): String {
+      return this.aaa.to_string();
+    }
+  }
+
+  public proc add(): void 
+    when T: ToString, EEE {
+    this.aaa.ggg();
+  }
+}
+
+struct ContainsGeneric<T> {
+  aaa: Genericstruct<T>, 
+
+  public static proc new(Genericstruct<T> aaa): ContainsGeneric 
+    when T: ToString {
+    return Genericstruct::new(aaa);
+  }
+
+  implements ToString when T: ToString {
+    proc to_string(): String {
+      return this.aaa.to_string();
+    }
+  }
+}
+
+struct AAA {
+  num1: u32;
+  num2: u32;
+
+  public static proc new(u32 num1, u32 num2): AAA {
+    return AAA { num1: num1, num2: num2 };
+  }
+
+  implements ToString {
+    proc to_string(): String {
+      return num1.to_string() + num2.to_string();
+    }
+  }
+}
+
+static proc eee(ToString to_stringable) {
+  to_stringable.to_string();
+}
+
+static proc main(): u32 {
+  let a = ContainsGeneric::new(Genericstruct::new(AAA::new());
+  eee(a);
+
   let result1 = part1.part();
   let result2 = part2.part();
   let result3 = part3.part();

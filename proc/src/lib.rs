@@ -1,13 +1,13 @@
 use std::sync::Mutex;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Punct, TokenTree};
+use proc_macro2::TokenTree;
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input, parse_str,
     punctuated::Punctuated,
-    Expr, Ident, ItemFn, LitStr, Path, Token,
+    Ident, ItemFn, LitStr, Path, Token,
 };
 
 extern crate proc_macro;
