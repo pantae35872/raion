@@ -160,13 +160,36 @@ impl Display for InstructionType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum AttributeToken {
+    Public,
+    Private,
+    Implemented,
+    Contain,
+    Static,
+    Accept,
+    Return,
+    Overwrite,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ASMKeyword {
+    Proc,
+    Field,
+    Struct,
+    Interface,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum ASMToken {
     Instruction(InstructionType),
     Label(String),
     Register(RegisterType),
+    Keyword(ASMKeyword),
     Interger(u64),
     Identifier(String),
+    HashName(String),
     String(String),
+    Attribute(AttributeToken),
     Plus,
     Minus,
     Comma,
@@ -174,6 +197,8 @@ pub enum ASMToken {
     RBracket,
     LCurly,
     RCurly,
+    LRoundBracket,
+    RRoundBracket,
     Arrow,
     NewLine,
 }
@@ -205,17 +230,86 @@ impl Display for ASMToken {
             Self::Interger(number) => {
                 write!(f, "Number token with value: {}", number)
             }
-            Self::Identifier(label) => write!(f, "Identifier token with value: {}", label),
+            Self::HashName(name) => {
+                write!(f, "Hash name token with value: {}", name)
+            }
+            Self::Identifier(name) => {
+                write!(f, "Identifier token with value: {}", name)
+            }
+            Self::Attribute(attribute) => {
+                write!(f, "Attribute token with value: {attribute}")
+            }
+            Self::Keyword(keyword) => write!(f, "Keyword token with value: {keyword}"),
             Self::String(string) => write!(f, "String token with value: {}", string),
             Self::Plus => write!(f, "Plus token"),
             Self::LBracket => write!(f, "Left Bracket token"),
             Self::RBracket => write!(f, "Right Bracket token"),
             Self::LCurly => write!(f, "Left Curly token"),
             Self::RCurly => write!(f, "Right Curly token"),
+            Self::LRoundBracket => write!(f, "Left Round Bracket token"),
+            Self::RRoundBracket => write!(f, "Right Round Bracket token"),
             Self::Arrow => write!(f, "Arrow token"),
             Self::Comma => write!(f, "Comma token"),
             Self::Minus => write!(f, "Minus token"),
             Self::NewLine => write!(f, "New line token"),
+        }
+    }
+}
+
+impl FromStr for ASMKeyword {
+    type Err = FailToParseFromString;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "proc" => Ok(Self::Proc),
+            "field" => Ok(Self::Field),
+            "struct" => Ok(Self::Struct),
+            "interface" => Ok(Self::Interface),
+            _ => Err(FailToParseFromString),
+        }
+    }
+}
+
+impl Display for ASMKeyword {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Proc => write!(f, "proc"),
+            Self::Field => write!(f, "field"),
+            Self::Struct => write!(f, "struct"),
+            Self::Interface => write!(f, "interface"),
+        }
+    }
+}
+
+impl FromStr for AttributeToken {
+    type Err = FailToParseFromString;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Public" => Ok(Self::Public),
+            "Private" => Ok(Self::Private),
+            "Static" => Ok(Self::Static),
+            "Accept" => Ok(Self::Accept),
+            "Implemented" => Ok(Self::Implemented),
+            "Contain" => Ok(Self::Contain),
+            "Return" => Ok(Self::Return),
+            "Overwrite" => Ok(Self::Overwrite),
+            _ => Err(FailToParseFromString),
+        }
+    }
+}
+
+impl Display for AttributeToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Public => write!(f, "Public"),
+            Self::Static => write!(f, "Static"),
+            Self::Private => write!(f, "Private"),
+            Self::Accept => write!(f, "Accept"),
+            Self::Implemented => write!(f, "Implemented"),
+            Self::Contain => write!(f, "Contain"),
+            Self::Return => write!(f, "Return"),
+            Self::Overwrite => write!(f, "Overwrite"),
         }
     }
 }

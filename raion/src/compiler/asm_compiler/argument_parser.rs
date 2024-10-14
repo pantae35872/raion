@@ -107,44 +107,42 @@ impl<'a> ArgumentParser<'a> {
     pub fn is_valid(&mut self) -> bool {
         let len = self.arguments_parse.len();
         for (i, argument) in self.arguments_parse.iter().enumerate() {
-            let valid = match argument {
-                ArgumentType::U64 | ArgumentType::U32 => {
-                    self.match_token(self.current_offset, |e| matches!(e, ASMToken::Interger(_)))
-                }
-                ArgumentType::Register => {
-                    self.match_token(self.current_offset, |e| e.is_register_and_general())
-                }
-                ArgumentType::Section | ArgumentType::Label => self
-                    .match_token(self.current_offset, |e| {
-                        matches!(e, ASMToken::Identifier(_))
+            let valid =
+                match argument {
+                    ArgumentType::U64 | ArgumentType::U32 => self
+                        .match_token(self.current_offset, |e| matches!(e, ASMToken::Interger(_))),
+                    ArgumentType::Register => {
+                        self.match_token(self.current_offset, |e| e.is_register_and_general())
+                    }
+                    ArgumentType::Section | ArgumentType::Label => self
+                        .match_token(self.current_offset, |e| matches!(e, ASMToken::HashName(_))),
+                    ArgumentType::DerefRegister => {
+                        let value = self
+                            .match_token(self.current_offset, |e| matches!(e, ASMToken::LBracket))
+                            && self.match_token(self.current_offset + 1, |e| {
+                                matches!(e, ASMToken::Register(_))
+                            })
+                            && self.match_token(self.current_offset + 2, |e| {
+                                matches!(e, ASMToken::RBracket)
+                            });
+                        self.current_offset += 2;
+                        value
+                    }
+                    ArgumentType::DerefRegisterOffset => {
+                        let value = self.match_token_sequence(&[
+                            |e: &ASMToken| matches!(e, ASMToken::LBracket),
+                            |e: &ASMToken| matches!(e, ASMToken::Register(_)),
+                            |e: &ASMToken| matches!(e, ASMToken::Minus | ASMToken::Plus),
+                            |e: &ASMToken| matches!(e, ASMToken::Interger(_)),
+                            |e: &ASMToken| matches!(e, ASMToken::RBracket),
+                        ]);
+                        self.current_offset += 4;
+                        value
+                    }
+                    ArgumentType::RegisterSp => self.match_token(self.current_offset, |e| {
+                        matches!(e, ASMToken::Register(RegisterType::Sp))
                     }),
-                ArgumentType::DerefRegister => {
-                    let value = self
-                        .match_token(self.current_offset, |e| matches!(e, ASMToken::LBracket))
-                        && self.match_token(self.current_offset + 1, |e| {
-                            matches!(e, ASMToken::Register(_))
-                        })
-                        && self.match_token(self.current_offset + 2, |e| {
-                            matches!(e, ASMToken::RBracket)
-                        });
-                    self.current_offset += 2;
-                    value
-                }
-                ArgumentType::DerefRegisterOffset => {
-                    let value = self.match_token_sequence(&[
-                        |e: &ASMToken| matches!(e, ASMToken::LBracket),
-                        |e: &ASMToken| matches!(e, ASMToken::Register(_)),
-                        |e: &ASMToken| matches!(e, ASMToken::Minus | ASMToken::Plus),
-                        |e: &ASMToken| matches!(e, ASMToken::Interger(_)),
-                        |e: &ASMToken| matches!(e, ASMToken::RBracket),
-                    ]);
-                    self.current_offset += 4;
-                    value
-                }
-                ArgumentType::RegisterSp => self.match_token(self.current_offset, |e| {
-                    matches!(e, ASMToken::Register(RegisterType::Sp))
-                }),
-            };
+                };
 
             if !valid {
                 return false;
@@ -192,11 +190,11 @@ impl<'a> ArgumentParser<'a> {
                     arguments.push(ParsedArgument::U32(*number as u32));
                 }
                 ArgumentType::Section => {
-                    let ident = match self.compiler.peek(self.current_offset).unwrap().value() {
-                        ASMToken::Identifier(ident) => ident,
+                    let hash_name = match self.compiler.peek(self.current_offset).unwrap().value() {
+                        ASMToken::HashName(hash_name) => hash_name,
                         _ => unreachable!(),
                     };
-                    arguments.push(ParsedArgument::Section(xxh3_64(ident.as_bytes())));
+                    arguments.push(ParsedArgument::Section(xxh3_64(hash_name.as_bytes())));
                 }
                 ArgumentType::Label => {
                     let ident = match self.compiler.peek(self.current_offset).unwrap().value() {

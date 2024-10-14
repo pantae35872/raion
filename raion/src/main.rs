@@ -3,7 +3,9 @@ use std::{env, fs::File, io::Read, path::Path, process::ExitCode};
 use common::commands::{Command, CommandExecutor};
 use raion::{
     compiler::rin_compiler::Path as RinPath,
+    lexer::asm_lexer::ASMLexer,
     manager::{CompilerManager, SingleUseCompiler},
+    WithLocation,
 };
 use toml::Value;
 
@@ -60,6 +62,39 @@ fn command_compile_emit_asm(_command_name: &str, args: &mut env::Args) -> Result
     return Ok(());
 }
 
+fn command_compile_rasm(_command_name: &str, args: &mut env::Args) -> Result<(), String> {
+    let file_name = args.next().ok_or("no rasm file is provided".to_string())?;
+    let source_path = Path::new(&file_name);
+    let package_name = source_path
+        .file_stem()
+        .ok_or("File name is not provided".to_string())?
+        .to_str()
+        .ok_or(format!("file name is not valid utf8"))?;
+    let output = source_path.with_extension("sin");
+    let output_asm = source_path.with_extension("asm");
+    let module_path = RinPath::new(package_name);
+    let mut file = File::open(source_path)
+        .map_err(|e| format!("couldn't read {}: {e}", source_path.display()))?;
+    let mut buffer = String::new();
+    file.read_to_string(&mut buffer)
+        .map_err(|e| format!("couldn't read {}: {e}", source_path.display()))?;
+    let lexer = ASMLexer::new(&buffer, source_path.into());
+    let tokens = match lexer.tokenize() {
+        Ok(res) => res,
+        Err(err) => {
+            eprintln!("{err}");
+            return Err(format!(
+                "could not compile `{}` due to previous byte code generation error",
+                package_name
+            ));
+        }
+    };
+    for token in tokens {
+        println!("{}", token.value());
+    }
+    return Ok(());
+}
+
 fn command_compile(_command_name: &str, args: &mut env::Args) -> Result<(), String> {
     let file_name = args.next().ok_or("no rin file is provided".to_string())?;
     let source_path = Path::new(&file_name);
@@ -100,10 +135,16 @@ fn main() -> ExitCode {
             command_compile,
         ))
         .new_command(Command::new(
-            "compile-emit-asm",
-            "compile the provided sin file and emit asm",
+            "compile-emit-rasm",
+            "compile the provided sin file and emit rasm",
             "<rin file>",
             command_compile_emit_asm,
+        ))
+        .new_command(Command::new(
+            "compile-rasm",
+            "compile the provided rasm",
+            "<rasm file>",
+            command_compile_rasm,
         ))
         .run();
 }

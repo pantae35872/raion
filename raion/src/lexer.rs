@@ -11,7 +11,9 @@ pub enum LexerError {
     InvalidToken(String, Location),
     InvalidInterger(ParseIntError),
     InvalidEscapeSequence(String, Location),
+    InvalidAttribute(String, Location),
     ExpectedEndDoubleQuote(Option<char>, Location),
+    ExpectedEndAngelBracket(Option<char>, Location),
     EndOfBuffer,
 }
 
@@ -51,12 +53,42 @@ impl Display for LexerError {
                 .pointer(location.row, "", '^', color_red)?
                 .build()
             ),
+            Self::InvalidAttribute(attribute, location) => write!(
+                f,
+                "{}",
+                ErrorGenerator::new(
+                    location,
+                    format!("{style_bold}Invalid attribute `{attribute}` {style_reset}"),
+                    location.column.to_string().len(),
+                )
+                .vertical_pipe(format!("{}", location.column))?
+                .write_line(location.column)?
+                .new_line()?
+                .vertical_pipe("")?
+                .pointer(location.row, "", '^', color_red)?
+                .build()
+            ),
             Self::ExpectedEndDoubleQuote(_, location) => write!(
                 f,
                 "{}",
                 ErrorGenerator::new(
                     location,
                     format!("{style_bold}Unclosed string literal {style_reset}"),
+                    location.column.to_string().len(),
+                )
+                .vertical_pipe(format!("{}", location.column))?
+                .write_line(location.column)?
+                .new_line()?
+                .vertical_pipe("")?
+                .pointer(location.row, "", '^', color_red)?
+                .build()
+            ),
+            Self::ExpectedEndAngelBracket(_, location) => write!(
+                f,
+                "{}",
+                ErrorGenerator::new(
+                    location,
+                    format!("{style_bold}Unclosed hash literal {style_reset}"),
                     location.column.to_string().len(),
                 )
                 .vertical_pipe(format!("{}", location.column))?

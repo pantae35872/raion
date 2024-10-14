@@ -65,7 +65,11 @@ pub const ADD_SP_W_NUM: u8 = 3;
 pub const ARG_NUM: u8 = 1;
 pub const ARG_REG: u8 = 2;
 
+// Sin format
 pub const MAGIC_1: u8 = 69;
 pub const MAGIC_2: u8 = 69;
 pub const MAGIC_3: u8 = 0x69;
 pub const MAGIC_4: u8 = 0x69;
+pub const MAJOR: u8 = 1;
+pub const MINOR: u8 = 0;
+pub const PATCH: u8 = 0;

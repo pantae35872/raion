@@ -9,7 +9,7 @@ use common::{
         MOV_SECTION_ADDR2DEREF_REG_WITH_OFFSET, MOV_SECTION_ADDR_2REG, SUB_REG_W_NUM,
         SUB_REG_W_REG, SUB_SP_W_NUM,
     },
-    sin::sections::{SectionType, SinSection},
+    sin::sections::{Attribute, Procedure, SinSection},
 };
 use xxhash_rust::xxh3::xxh3_64;
 
@@ -34,6 +34,7 @@ pub struct ASMCompiler {
     data: Vec<u8>,
     sections: Vec<SinSection>,
     write_pos: usize,
+    attributes_buffer: Vec<Attribute>,
 }
 
 impl ASMCompiler {
@@ -43,6 +44,7 @@ impl ASMCompiler {
             data: Vec::new(),
             sections: Vec::new(),
             write_pos: 0,
+            attributes_buffer: Vec::new(),
         }
     }
 
@@ -383,25 +385,12 @@ impl ASMCompiler {
                         let procedure_hash = xxh3_64(procedure_name.as_bytes());
                         self.base.expect_token(ASMToken::Arrow)?;
                         let (start, end) = self.parse_section(procedure_hash)?;
-                        self.sections.push(SinSection::new(
-                            SectionType::Procedure,
-                            procedure_hash,
-                            start,
-                            end,
-                        ));
-                    }
-                    "const" => {
-                        self.base.consume();
-                        let const_name = self.parse_name()?;
-                        let const_hash = xxh3_64(const_name.as_bytes());
-                        self.base.expect_token(ASMToken::Arrow)?;
-                        let (start, end) = self.parse_section(const_hash)?;
-                        self.sections.push(SinSection::new(
-                            SectionType::Constant,
-                            xxh3_64(const_name.as_bytes()),
-                            start,
-                            end,
-                        ));
+                        todo!();
+                        //self.sections.push(SinSection::Procedure(Procedure::new(
+                        //    procedure_name,
+                        //    start,
+                        //    end - start,
+                        //)));
                     }
                     _ => return Err(CompilerError::UnexpectedToken(Some(token))),
                 },

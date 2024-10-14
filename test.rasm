@@ -1,0 +1,104 @@
+@Public
+interface <dev/main/Test2> -> [
+  @Static
+  @Accept(<u32>)
+  @Return(<u32>)
+  vproc <getn>
+
+  @Return(<u32>)
+  vproc <ggg>
+]
+
+@Implemented(<dev/main/Test2>)
+struct <dev/main/Test> -> [
+  @Contain(<u32>)
+  field <bbb>
+
+  @Contain(<u32>)
+  field <aaa>
+
+  @Public
+  @Static
+  @Accept(<u32>, <u32>)
+  @Return(<dev/main/Test>)
+  proc <new> -> {
+    local 3 // Initialize the local size 3
+    itylal 0 // Initialize type and load from arg stack into local 0 
+    itylal 1 // Initialize type and load from arg stack into local 1
+    ityl 2, <dev/main/Test> // Initialize type into local 2
+    ftyll 2, <aaa>, 1 // Field Type load local (load local into field of the local type)
+    ftyll 2, <bbb>, 0 // Field Type load local (local 1 to field bbb on local 2)
+    rl 2 // Return local 2
+  }
+
+  @Overwrite(<dev/main/Test2>)
+  @Static
+  @Accept(<u32>)
+  @Return(<u32>)
+  proc <getn> -> {
+    local 1
+    itylal 0 
+    pllos 0 // push local load operand stack
+    pnos 10 // push number operand stack
+    osa // Operand stack add 
+    callst <dev/main/Test>, <new> // Call a static procedure in a type
+    callsvt <dev/main/Test>, <dev/main/Test2>, <getn> // Call a static virtual in a type 
+    lcallv 0, <dev/main/Test2>, <getn>// Local Call virtual on an object
+    ros // Return operand stack
+  }
+
+  @Overwrite(<dev/main/Test2>)
+  @Return(<u32>)
+  proc <ggg> -> {
+    pnos 10 
+    ros
+  }
+
+  @Public
+  @Return(<void>)
+  proc <increase> -> {
+    ret
+  }
+
+  @Public
+  @Static
+  @Return(<u32>)
+  proc <another_static> -> {
+  }
+
+  @Public
+  @Static
+  @Accept(<u32>)
+  @Return(<u32>)
+  proc <aaa> -> {
+  }
+
+  @Public
+  @Static
+  @Accept(<dev/main/Test2>)
+  @Return(<u32>)
+  proc <dynamic> -> {
+  }
+
+  @Public
+  @Static
+  @Accept(<dev/main/Test2>)
+  @Return(<void>)
+  proc <static_dynamic> -> {
+  }
+]
+
+
+@Static
+@Return(<u64>)
+proc <dev/main/main> -> {
+  ros
+}
+
+@Static
+proc <start> -> {
+  local 1
+  calls <dev/main/main> // Call static 
+  itylr 0 
+  rl 0
+}
