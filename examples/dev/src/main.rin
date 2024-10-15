@@ -106,11 +106,11 @@ struct AAA {
   }
 }
 
-static proc eee(ToString to_stringable) {
+public static proc eee(ToString to_stringable) {
   to_stringable.to_string();
 }
 
-static proc main(): u32 {
+public static proc main(): u32 {
   let a = ContainsGeneric::new(Genericstruct::new(AAA::new());
   eee(a);
 

@@ -9,6 +9,7 @@ interface <dev/main/Test2> -> [
   vproc <ggg>
 ]
 
+@Public
 @Implemented(<dev/main/Test2>)
 struct <dev/main/Test> -> [
   @Contain(<u32>)
@@ -89,12 +90,14 @@ struct <dev/main/Test> -> [
 ]
 
 
+@Public
 @Static
 @Return(<u64>)
 proc <dev/main/main> -> {
   //ros
 }
 
+@Public
 @Static
 proc <start> -> {
   //local 1

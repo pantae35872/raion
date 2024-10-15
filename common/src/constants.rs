@@ -1,3 +1,5 @@
+use xxhash_rust::const_xxh3;
+
 //Memory releate instructions
 pub const MOV_OPCODE: u16 = 16;
 pub const PUSH_OPCODE: u16 = 17;
@@ -73,3 +75,15 @@ pub const MAGIC_4: u8 = 0x69;
 pub const MAJOR: u8 = 1;
 pub const MINOR: u8 = 0;
 pub const PATCH: u8 = 0;
+
+// ALl the primitive types hash
+pub const U8_HASH: u64 = const_xxh3::xxh3_64(b"u8");
+pub const U16_HASH: u64 = const_xxh3::xxh3_64(b"u16");
+pub const U32_HASH: u64 = const_xxh3::xxh3_64(b"u32");
+pub const U64_HASH: u64 = const_xxh3::xxh3_64(b"u64");
+pub const I8_HASH: u64 = const_xxh3::xxh3_64(b"i8");
+pub const I16_HASH: u64 = const_xxh3::xxh3_64(b"i16");
+pub const I32_HASH: u64 = const_xxh3::xxh3_64(b"i32");
+pub const I64_HASH: u64 = const_xxh3::xxh3_64(b"i64");
+pub const BOOL_HASH: u64 = const_xxh3::xxh3_64(b"bool");
+pub const VOID_HASH: u64 = const_xxh3::xxh3_64(b"void");

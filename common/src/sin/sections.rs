@@ -4,37 +4,37 @@ use super::SinError;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
-    hash_name: u64,
-    attributes: Attributes,
+    pub hash_name: u64,
+    pub attributes: Attributes,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Procedure {
-    hash_name: u64,
-    start: u64,
-    size: u64,
-    attributes: Attributes,
+    pub hash_name: u64,
+    pub start: u64,
+    pub size: u64,
+    pub attributes: Attributes,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Structure {
-    hash_name: u64,
-    fields: Vec<Field>,
-    procedures: Vec<Procedure>,
-    attributes: Attributes,
+    pub hash_name: u64,
+    pub fields: Vec<Field>,
+    pub procedures: Vec<Procedure>,
+    pub attributes: Attributes,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VProcedure {
-    hash_name: u64,
-    attributes: Attributes,
+    pub hash_name: u64,
+    pub attributes: Attributes,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Interface {
-    hash_name: u64,
-    vprocedures: Vec<VProcedure>,
-    attributes: Attributes,
+    pub hash_name: u64,
+    pub vprocedures: Vec<VProcedure>,
+    pub attributes: Attributes,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -51,7 +51,7 @@ pub enum Attribute {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Attributes {
-    attributes: Vec<Attribute>,
+    pub attributes: Vec<Attribute>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -195,6 +195,7 @@ impl Procedure {
             attributes,
         }
     }
+
     pub fn from_reader(reader: &mut BufferReader) -> Result<Self, SinError> {
         let decoded_hash = reader.read_u64().ok_or(SinError::InvalidSin)?;
         let decoded_start = reader.read_u64().ok_or(SinError::InvalidSin)?;

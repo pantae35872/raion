@@ -8,3 +8,7 @@ inline_colorization = "0.1.6"
 
 [dependencies.proc]
 path = "../proc"
+
+[dependencies.xxhash-rust]
+version = "0.8.12"
+features = ["xxh3", "const_xxh3"]
