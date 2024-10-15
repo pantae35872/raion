@@ -6,3 +6,4 @@ perf.data.old
 out.sin
 out.asm
 examples/dev/build/
+test.sin

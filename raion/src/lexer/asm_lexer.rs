@@ -30,6 +30,7 @@ impl<'a> ASMLexer<'a> {
                 continue;
             }
             if value.is_alphabetic() {
+                self.base.save_location();
                 self.base
                     .consume_while(&mut buffer, |e| e.is_alphanumeric(), |_| false);
 
@@ -57,6 +58,7 @@ impl<'a> ASMLexer<'a> {
                 continue;
             }
             if value == '<' {
+                self.base.save_location();
                 self.base.consume();
                 self.base
                     .consume_while(&mut buffer, |e| e != '>', |_| false);
@@ -73,6 +75,7 @@ impl<'a> ASMLexer<'a> {
                 continue;
             }
             if value == '@' {
+                self.base.save_location();
                 self.base.consume();
                 self.base
                     .consume_while(&mut buffer, |e| e.is_alphanumeric(), |_| false);
@@ -89,56 +92,67 @@ impl<'a> ASMLexer<'a> {
                 continue;
             }
             if value == ',' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::Comma);
                 continue;
             }
             if value == '\n' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::NewLine);
                 continue;
             }
             if value == '+' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::Plus);
                 continue;
             }
             if value == '[' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::LBracket);
                 continue;
             }
             if value == ']' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::RBracket);
                 continue;
             }
             if value == '{' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::LCurly);
                 continue;
             }
             if value == '}' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::RCurly);
                 continue;
             }
             if value == '(' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::LRoundBracket);
                 continue;
             }
             if value == ')' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::RRoundBracket);
                 continue;
             }
             if self.base.peek_match("->") {
+                self.base.save_location();
                 self.base.consumes(2);
                 self.base.push(ASMToken::Arrow);
                 continue;
             }
             if value == '-' {
+                self.base.save_location();
                 self.base.consume();
                 self.base.push(ASMToken::Minus);
                 continue;

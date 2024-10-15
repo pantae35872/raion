@@ -174,6 +174,7 @@ pub enum AttributeToken {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ASMKeyword {
     Proc,
+    VProc,
     Field,
     Struct,
     Interface,
@@ -265,6 +266,7 @@ impl FromStr for ASMKeyword {
             "field" => Ok(Self::Field),
             "struct" => Ok(Self::Struct),
             "interface" => Ok(Self::Interface),
+            "vproc" => Ok(Self::VProc),
             _ => Err(FailToParseFromString),
         }
     }
@@ -277,6 +279,7 @@ impl Display for ASMKeyword {
             Self::Field => write!(f, "field"),
             Self::Struct => write!(f, "struct"),
             Self::Interface => write!(f, "interface"),
+            Self::VProc => write!(f, "vproc"),
         }
     }
 }

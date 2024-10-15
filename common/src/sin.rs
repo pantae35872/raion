@@ -68,7 +68,7 @@ impl Version {
     }
 
     pub fn compatible(&self, version: Version) -> bool {
-        self.major != version.major
+        self.major == version.major
     }
 
     pub fn from_reader(reader: &mut BufferReader) -> Result<Self, SinError> {

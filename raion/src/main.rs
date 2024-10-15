@@ -1,8 +1,17 @@
-use std::{env, fs::File, io::Read, path::Path, process::ExitCode};
+use std::{
+    env,
+    fs::{self, File},
+    io::{Read, Write},
+    path::Path,
+    process::ExitCode,
+};
 
-use common::commands::{Command, CommandExecutor};
+use common::{
+    commands::{Command, CommandExecutor},
+    sin::Sin,
+};
 use raion::{
-    compiler::rin_compiler::Path as RinPath,
+    compiler::{asm_compiler::ASMCompiler, rin_compiler::Path as RinPath},
     lexer::asm_lexer::ASMLexer,
     manager::{CompilerManager, SingleUseCompiler},
     WithLocation,
@@ -89,9 +98,29 @@ fn command_compile_rasm(_command_name: &str, args: &mut env::Args) -> Result<(),
             ));
         }
     };
-    for token in tokens {
-        println!("{}", token.value());
-    }
+    let compiler = ASMCompiler::new(tokens);
+    match compiler.compile() {
+        Ok((sections, data)) => {
+            let sin = Sin::new(sections, &data).to_bytes();
+
+            if Path::new(&output).exists() {
+                fs::remove_file(&output)
+                    .map_err(|e| format!("couldn't remove existing sin file: {e}"))?;
+            }
+            File::create(output)
+                .map_err(|e| format!("cannot create sin file: {e}"))?
+                .write_all(&sin)
+                .map_err(|e| format!("cannot write to sin: {e}"))?;
+        }
+        Err(err) => {
+            eprintln!("{err}");
+            return Err(format!(
+                "could not compile `{}` due to previous byte code generation error",
+                package_name
+            ));
+        }
+    };
+
     return Ok(());
 }
 

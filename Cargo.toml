@@ -4,7 +4,7 @@ resolver = "1"
 members = [
   "common",
   "craion", "proc",
-  "raion",
+  "raion", "sin_reader",
 ]
 
 [profile.release]

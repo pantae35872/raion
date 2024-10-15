@@ -9,12 +9,14 @@ use common::{
         MOV_SECTION_ADDR2DEREF_REG_WITH_OFFSET, MOV_SECTION_ADDR_2REG, SUB_REG_W_NUM,
         SUB_REG_W_REG, SUB_SP_W_NUM,
     },
-    sin::sections::{Attribute, Procedure, SinSection},
+    sin::sections::{
+        Attribute, Attributes, Field, Interface, Procedure, SinSection, Structure, VProcedure,
+    },
 };
 use xxhash_rust::xxh3::xxh3_64;
 
 use crate::{
-    token::asm_token::{ASMToken, InstructionType},
+    token::asm_token::{ASMKeyword, ASMToken, AttributeToken, InstructionType},
     Location, WithLocation,
 };
 
@@ -372,28 +374,256 @@ impl ASMCompiler {
         return Ok(name);
     }
 
+    pub fn parse_hash(&mut self) -> Result<u64, CompilerError<ASMToken>> {
+        let hash = match self
+            .base
+            .peek(0)
+            .ok_or(CompilerError::UnexpectedToken(None))?
+        {
+            WithLocation {
+                value: ASMToken::HashName(name),
+                location: _,
+            } => name,
+            token => return Err(CompilerError::UnexpectedToken(Some(token.clone()))),
+        }
+        .clone();
+        self.base.consume();
+        return Ok(xxh3_64(hash.as_bytes()));
+    }
+
+    pub fn parse_attribute(&mut self) -> Result<Attribute, CompilerError<ASMToken>> {
+        let attribute = match self
+            .base
+            .consume()
+            .ok_or(CompilerError::UnexpectedToken(None))?
+        {
+            WithLocation {
+                value: ASMToken::Attribute(attribute),
+                ..
+            } => attribute,
+            token => return Err(CompilerError::UnexpectedToken(Some(token.clone()))),
+        };
+        match attribute {
+            AttributeToken::Public => Ok(Attribute::Public),
+            AttributeToken::Private => Ok(Attribute::Private),
+            AttributeToken::Static => Ok(Attribute::Static),
+            AttributeToken::Implemented => {
+                self.base.expect_token(ASMToken::LRoundBracket)?;
+                let hash = self.parse_hash()?;
+                self.base.expect_token(ASMToken::RRoundBracket)?;
+                Ok(Attribute::Implemented(hash))
+            }
+            AttributeToken::Contain => {
+                self.base.expect_token(ASMToken::LRoundBracket)?;
+                let hash = self.parse_hash()?;
+                self.base.expect_token(ASMToken::RRoundBracket)?;
+                Ok(Attribute::Contain(hash))
+            }
+            AttributeToken::Return => {
+                self.base.expect_token(ASMToken::LRoundBracket)?;
+                let hash = self.parse_hash()?;
+                self.base.expect_token(ASMToken::RRoundBracket)?;
+                Ok(Attribute::Return(hash))
+            }
+            AttributeToken::Overwrite => {
+                self.base.expect_token(ASMToken::LRoundBracket)?;
+                let hash = self.parse_hash()?;
+                self.base.expect_token(ASMToken::RRoundBracket)?;
+                Ok(Attribute::Overwrite(hash))
+            }
+            AttributeToken::Accept => {
+                self.base.expect_token(ASMToken::LRoundBracket)?;
+                let mut hashs = Vec::new();
+                while let Some(token) = self.base.peek(0).cloned() {
+                    match token {
+                        WithLocation {
+                            value: ASMToken::HashName(..),
+                            ..
+                        } => {
+                            hashs.push(self.parse_hash()?);
+                        }
+                        WithLocation {
+                            value: ASMToken::RRoundBracket,
+                            ..
+                        } => {
+                            self.base.consume();
+                            break;
+                        }
+                        unexpected => return Err(CompilerError::UnexpectedToken(Some(unexpected))),
+                    }
+                    if matches!(
+                        self.base
+                            .peek(0)
+                            .ok_or(CompilerError::UnexpectedToken(None))?,
+                        WithLocation {
+                            value: ASMToken::RRoundBracket,
+                            ..
+                        }
+                    ) {
+                        self.base.consume();
+                        break;
+                    }
+                    self.base.expect_token(ASMToken::Comma)?;
+                }
+                Ok(Attribute::Accept(hashs))
+            }
+        }
+    }
+
+    pub fn parse_proc(&mut self) -> Result<Procedure, CompilerError<ASMToken>> {
+        self.base
+            .expect_token(ASMToken::Keyword(ASMKeyword::Proc))?;
+        let procedure_hash = self.parse_hash()?;
+        self.base.expect_token(ASMToken::Arrow)?;
+        let (start, end) = self.parse_section(procedure_hash)?;
+        let attr = self.attributes_buffer.clone();
+        self.attributes_buffer.clear();
+        Ok(Procedure::new(
+            procedure_hash,
+            start,
+            end - start,
+            Attributes::new(attr),
+        ))
+    }
+
+    pub fn parse_interface(&mut self) -> Result<Interface, CompilerError<ASMToken>> {
+        self.base
+            .expect_token(ASMToken::Keyword(ASMKeyword::Interface))?;
+        let interface_hash = self.parse_hash()?;
+        let mut vprocs = Vec::new();
+        self.base.expect_token(ASMToken::Arrow)?;
+        self.base.expect_token(ASMToken::LBracket)?;
+        let attr = self.attributes_buffer.clone();
+        self.attributes_buffer.clear();
+        while let Some(token) = self.base.peek(0).cloned() {
+            match token {
+                WithLocation {
+                    value: ASMToken::Keyword(ASMKeyword::VProc),
+                    ..
+                } => {
+                    self.base.consume();
+                    let hash = self.parse_hash()?;
+                    let attr = self.attributes_buffer.clone();
+                    self.attributes_buffer.clear();
+                    vprocs.push(VProcedure::new(hash, Attributes::new(attr)));
+                }
+                WithLocation {
+                    value: ASMToken::Attribute(..),
+                    ..
+                } => {
+                    let attribute = self.parse_attribute()?;
+                    self.attributes_buffer.push(attribute);
+                }
+                WithLocation {
+                    value: ASMToken::NewLine,
+                    ..
+                } => {
+                    self.base.consume();
+                }
+                WithLocation {
+                    value: ASMToken::RBracket,
+                    ..
+                } => {
+                    break;
+                }
+                unexpected => return Err(CompilerError::UnexpectedToken(Some(unexpected))),
+            }
+        }
+        self.base.expect_token(ASMToken::RBracket)?;
+        Ok(Interface::new(
+            interface_hash,
+            vprocs,
+            Attributes::new(attr),
+        ))
+    }
+
+    pub fn parse_struct(&mut self) -> Result<Structure, CompilerError<ASMToken>> {
+        self.base
+            .expect_token(ASMToken::Keyword(ASMKeyword::Struct))?;
+        let interface_hash = self.parse_hash()?;
+        let mut procedures = Vec::new();
+        let mut fields = Vec::new();
+        self.base.expect_token(ASMToken::Arrow)?;
+        self.base.expect_token(ASMToken::LBracket)?;
+        let attr = self.attributes_buffer.clone();
+        self.attributes_buffer.clear();
+        while let Some(token) = self.base.peek(0).cloned() {
+            match token {
+                WithLocation {
+                    value: ASMToken::Keyword(ASMKeyword::Proc),
+                    ..
+                } => {
+                    procedures.push(self.parse_proc()?);
+                }
+                WithLocation {
+                    value: ASMToken::Keyword(ASMKeyword::Field),
+                    ..
+                } => {
+                    self.base.consume();
+                    let attr = self.attributes_buffer.clone();
+                    self.attributes_buffer.clear();
+                    let hash = self.parse_hash()?;
+                    fields.push(Field::new(hash, Attributes::new(attr)));
+                }
+                WithLocation {
+                    value: ASMToken::Attribute(..),
+                    ..
+                } => {
+                    let attribute = self.parse_attribute()?;
+                    self.attributes_buffer.push(attribute);
+                }
+                WithLocation {
+                    value: ASMToken::NewLine,
+                    ..
+                } => {
+                    self.base.consume();
+                }
+                WithLocation {
+                    value: ASMToken::RBracket,
+                    ..
+                } => {
+                    break;
+                }
+                unexpected => return Err(CompilerError::UnexpectedToken(Some(unexpected))),
+            }
+        }
+        self.base.expect_token(ASMToken::RBracket)?;
+        Ok(Structure::new(
+            interface_hash,
+            fields,
+            procedures,
+            Attributes::new(attr),
+        ))
+    }
+
     pub fn compile(mut self) -> Result<(Vec<SinSection>, Vec<u8>), CompilerError<ASMToken>> {
         while let Some(token) = self.base.peek(0).cloned() {
             match token {
                 WithLocation {
-                    value: ASMToken::Identifier(ref ident),
+                    value: ASMToken::Keyword(keyword),
                     ..
-                } => match ident.as_str() {
-                    "proc" => {
-                        self.base.consume();
-                        let procedure_name = self.parse_name()?;
-                        let procedure_hash = xxh3_64(procedure_name.as_bytes());
-                        self.base.expect_token(ASMToken::Arrow)?;
-                        let (start, end) = self.parse_section(procedure_hash)?;
-                        todo!();
-                        //self.sections.push(SinSection::Procedure(Procedure::new(
-                        //    procedure_name,
-                        //    start,
-                        //    end - start,
-                        //)));
+                } => match keyword {
+                    ASMKeyword::Proc => {
+                        let proc = self.parse_proc()?;
+                        self.sections.push(SinSection::Procedure(proc));
+                    }
+                    ASMKeyword::Interface => {
+                        let interface = self.parse_interface()?;
+                        self.sections.push(SinSection::Interface(interface));
+                    }
+                    ASMKeyword::Struct => {
+                        let structure = self.parse_struct()?;
+                        self.sections.push(SinSection::Structure(structure));
                     }
                     _ => return Err(CompilerError::UnexpectedToken(Some(token))),
                 },
+                WithLocation {
+                    value: ASMToken::Attribute(..),
+                    ..
+                } => {
+                    let attribute = self.parse_attribute()?;
+                    self.attributes_buffer.push(attribute);
+                }
                 WithLocation {
                     value: ASMToken::NewLine,
                     ..
