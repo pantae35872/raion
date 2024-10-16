@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use common::sin::sections::SinSection;
 
@@ -11,6 +11,7 @@ use crate::{
 
 use self::registers::RegisterFile;
 
+pub mod objects;
 pub mod registers;
 
 #[derive(Debug)]

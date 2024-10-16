@@ -10,7 +10,7 @@ use crate::{
     },
     memory::{Memory, MemoryError},
     ret_stack::RetStack,
-    section_manager::{LoadedSection, SectionManager},
+    section_manager::SectionManager,
 };
 
 use super::{
@@ -20,14 +20,14 @@ use super::{
 
 macro_rules! parse_and_jump {
     ($args:expr) => {
-        let section_hash = $args.argument.parse_u64()?;
-        let current_section = $args
-            .section_manager
-            .get_section_hash(section_hash)
-            .ok_or(super::InstructionError::InvalidSection(section_hash))?;
-        $args
-            .register
-            .set_ip(current_section.mem_start() + $args.argument.parse_u16()?.into());
+        //let section_hash = $args.argument.parse_u64()?;
+        //let current_section = $args
+        //    .section_manager
+        //    .get_section_hash(section_hash)
+        //    .ok_or(super::InstructionError::InvalidSection(section_hash))?;
+        //$args
+        //    .register
+        //    .set_ip(current_section.mem_start() + $args.argument.parse_u16()?.into());
     };
 }
 
@@ -51,7 +51,6 @@ mod jmp;
 mod jmz;
 mod larg;
 mod leave;
-mod mov;
 mod mul;
 mod outc;
 mod pop;
@@ -216,11 +215,11 @@ impl<'a> InstructionArgument<'a> {
             .unwrap_or([0; T]));
     }
 
-    pub fn parse_section(&mut self) -> Result<&LoadedSection, InstructionError> {
-        let section_hash = self.argument.parse_u64()?;
-        return Ok(self
-            .section_manager
-            .get_section_hash(section_hash)
-            .ok_or(InstructionError::InvalidSection(section_hash))?);
-    }
+    //pub fn parse_section(&mut self) -> Result<&LoadedSection, InstructionError> {
+    //    let section_hash = self.argument.parse_u64()?;
+    //    return Ok(self
+    //        .section_manager
+    //        .get_section_hash(section_hash)
+    //        .ok_or(InstructionError::InvalidSection(section_hash))?);
+    //}
 }

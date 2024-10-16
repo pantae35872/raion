@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 bitflags = "2.6.0"
 inline_colorization = "0.1.6"
+lazy_static = "1.5.0"
 
 [dependencies.xxhash-rust]
 version = "0.8.12"

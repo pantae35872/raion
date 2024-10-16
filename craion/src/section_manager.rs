@@ -15,7 +15,7 @@ pub enum Visibility {
 }
 
 #[derive(Debug, Clone)]
-pub enum RuntimeType {
+pub enum LoadedType {
     U8,
     U16,
     U32,
@@ -30,9 +30,9 @@ pub enum RuntimeType {
 }
 
 #[derive(Debug, Clone)]
-pub struct RuntimeVProcs {
-    return_type: RuntimeType,
-    accept: Vec<RuntimeType>,
+pub struct LoadedVProcs {
+    return_type: LoadedType,
+    accept: Vec<LoadedType>,
     is_static: bool,
 }
 
@@ -41,14 +41,14 @@ pub struct LoadedProcedure {
     mem_start: Address,
     mem_size: u64,
     is_static: bool,
-    return_type: RuntimeType,
-    accept: Vec<RuntimeType>,
+    return_type: LoadedType,
+    accept: Vec<LoadedType>,
     visibility: Visibility,
 }
 
 #[derive(Debug, Clone)]
 pub struct LoadedInterface {
-    vprocs: NoHashHashMap<u64, RuntimeVProcs>,
+    vprocs: NoHashHashMap<u64, LoadedVProcs>,
     visibility: Visibility,
 }
 
@@ -59,7 +59,7 @@ pub struct ImplementedInterface {
 
 #[derive(Debug, Clone)]
 pub struct RuntimeField {
-    contain_type: RuntimeType,
+    contain_type: LoadedType,
     visibility: Visibility,
 }
 
@@ -97,7 +97,7 @@ impl SectionManager {
     ) -> (LoadedProcedure, Option<u64>) {
         let mut visibility = Visibility::Private;
         let mut is_static = false;
-        let mut return_type = RuntimeType::Void;
+        let mut return_type = LoadedType::Void;
         let mut accept = Vec::new();
         let mut overwrited = None;
         for attribute in &proc.attributes.attributes {
@@ -106,10 +106,10 @@ impl SectionManager {
                 Attribute::Private => visibility = Visibility::Private,
                 Attribute::Static => is_static = true,
                 Attribute::Accept(accep) => {
-                    accept = accep.iter().map(|e| RuntimeType::from_hash(*e)).collect();
+                    accept = accep.iter().map(|e| LoadedType::from_hash(*e)).collect();
                 }
                 Attribute::Overwrite(overwrite) => overwrited = Some(overwrite),
-                Attribute::Return(retur) => return_type = RuntimeType::from_hash(*retur),
+                Attribute::Return(retur) => return_type = LoadedType::from_hash(*retur),
                 attri => panic!("Functions cant have this attribute {attri:?}"),
             }
         }
@@ -134,12 +134,12 @@ impl SectionManager {
 
     fn load_field(field: &Field) -> RuntimeField {
         let mut visibility = Visibility::Private;
-        let mut contain_type = RuntimeType::Void;
+        let mut contain_type = LoadedType::Void;
         for attri in &field.attributes.attributes {
             match attri {
                 Attribute::Public => visibility = Visibility::Public,
                 Attribute::Private => visibility = Visibility::Private,
-                Attribute::Contain(contain) => contain_type = RuntimeType::from_hash(*contain),
+                Attribute::Contain(contain) => contain_type = LoadedType::from_hash(*contain),
                 attri => panic!("Functions cant have this attribute {attri:?}"),
             }
         }
@@ -149,22 +149,22 @@ impl SectionManager {
         }
     }
 
-    fn load_vproc(vproc: &VProcedure) -> RuntimeVProcs {
+    fn load_vproc(vproc: &VProcedure) -> LoadedVProcs {
         let mut is_static = false;
-        let mut return_type = RuntimeType::Void;
+        let mut return_type = LoadedType::Void;
         let mut accept = Vec::new();
         for attribute in &vproc.attributes.attributes {
             match attribute {
                 Attribute::Static => is_static = true,
                 Attribute::Accept(accep) => {
-                    accept = accep.iter().map(|e| RuntimeType::from_hash(*e)).collect();
+                    accept = accep.iter().map(|e| LoadedType::from_hash(*e)).collect();
                 }
-                Attribute::Return(retur) => return_type = RuntimeType::from_hash(*retur),
+                Attribute::Return(retur) => return_type = LoadedType::from_hash(*retur),
                 attri => panic!("Functions cant have this attribute {attri:?}"),
             }
         }
 
-        RuntimeVProcs {
+        LoadedVProcs {
             return_type,
             accept,
             is_static,
@@ -243,7 +243,7 @@ impl SectionManager {
             }
             SinSection::Interface(interface) => {
                 let mut visibility = Visibility::Private;
-                for attri in &structure.attributes.attributes {
+                for attri in &interface.attributes.attributes {
                     match attri {
                         Attribute::Public => visibility = Visibility::Public,
                         Attribute::Private => visibility = Visibility::Private,
@@ -251,7 +251,7 @@ impl SectionManager {
                     }
                 }
                 let mut vprocs = NoHashHashMap::default();
-                for vproc in interface.vprocedures {
+                for vproc in &interface.vprocedures {
                     vprocs.insert(vproc.hash_name, Self::load_vproc(&vproc));
                 }
                 self.interfaces
@@ -276,7 +276,7 @@ impl SectionManager {
     }
 }
 
-impl RuntimeType {
+impl LoadedType {
     pub fn from_hash(hash: u64) -> Self {
         match hash {
             U8_HASH => Self::U8,
