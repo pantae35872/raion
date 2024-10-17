@@ -1,3 +1,5 @@
+use std::collections::hash_map;
+
 use crate::memory::{address::Address, Memory};
 use common::{
     constants::{
@@ -58,16 +60,16 @@ pub struct ImplementedInterface {
 }
 
 #[derive(Debug, Clone)]
-pub struct RuntimeField {
-    contain_type: LoadedType,
+pub struct LoadedField {
+    pub contain_type: LoadedType,
     visibility: Visibility,
 }
 
 #[derive(Debug, Clone)]
 pub struct LoadedStructure {
-    fields: NoHashHashMap<u64, RuntimeField>,
-    procs: NoHashHashMap<u64, LoadedProcedure>,
-    implements: NoHashHashMap<u64, ImplementedInterface>,
+    pub fields: NoHashHashMap<u64, LoadedField>,
+    pub procs: NoHashHashMap<u64, LoadedProcedure>,
+    pub implements: NoHashHashMap<u64, ImplementedInterface>,
     visibility: Visibility,
 }
 
@@ -132,7 +134,7 @@ impl SectionManager {
         )
     }
 
-    fn load_field(field: &Field) -> RuntimeField {
+    fn load_field(field: &Field) -> LoadedField {
         let mut visibility = Visibility::Private;
         let mut contain_type = LoadedType::Void;
         for attri in &field.attributes.attributes {
@@ -143,7 +145,7 @@ impl SectionManager {
                 attri => panic!("Functions cant have this attribute {attri:?}"),
             }
         }
-        RuntimeField {
+        LoadedField {
             contain_type,
             visibility,
         }
@@ -273,6 +275,14 @@ impl SectionManager {
 
         //self.write_pos += data.len();
         //return self.get_section_hash(section.hash()).unwrap();
+    }
+
+    pub fn structure_iter(&self) -> hash_map::Iter<'_, u64, LoadedStructure> {
+        self.structures.iter()
+    }
+
+    pub fn structure(&self, hash: u64) -> Option<&LoadedStructure> {
+        self.structures.get(&hash)
     }
 }
 

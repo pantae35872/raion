@@ -10,6 +10,27 @@ interface <dev/main/Test2> -> [
 ]
 
 @Public
+struct <StTest2> -> [
+  @Contain(<u32>)
+  field <test2>
+
+  @Contain(<u32>)
+  field <test1>
+]
+
+@Public
+struct <StTest> -> [
+  @Contain(<u32>)
+  field <ee>
+
+  @Contain(<StTest2>)
+  field <cona>
+
+  @Contain(<StTest2>)
+  field <cona2>
+]
+
+@Public
 @Implemented(<dev/main/Test2>)
 struct <dev/main/Test> -> [
   @Contain(<u32>)

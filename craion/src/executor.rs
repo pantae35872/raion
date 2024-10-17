@@ -1,6 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use common::sin::sections::SinSection;
+use objects::type_heap::TYPE_HEAP;
 
 use crate::{
     decoder::decode,
@@ -87,6 +88,10 @@ impl Executor {
     pub fn load_section(&mut self, section: &SinSection, data: &[u8]) {
         self.section_manager
             .load_section(section, data, &mut self.memory);
+    }
+
+    pub fn init(&mut self) {
+        TYPE_HEAP.lock().unwrap().init(&self.section_manager);
     }
 
     pub fn memory(&mut self) -> &mut Memory {
