@@ -1,12 +1,17 @@
-use std::{collections::hash_map::Values, sync::Mutex};
+use std::{
+    collections::hash_map::Values,
+    sync::{Arc, Mutex, RwLock},
+};
 
 use common::no_hash_hashmap::NoHashHashMap;
 use lazy_static::lazy_static;
 
 use crate::section_manager::{LoadedProcedure, LoadedStructure, LoadedType, SectionManager};
 
+use super::{heap_object::HeapObjectData, Object};
+
 lazy_static! {
-    pub static ref TYPE_HEAP: Mutex<TypeHeap> = Mutex::new(TypeHeap::new());
+    pub static ref TYPE_HEAP: RwLock<TypeHeap> = RwLock::new(TypeHeap::new());
 }
 
 pub struct TypeHeap {
@@ -30,7 +35,7 @@ pub struct Structure {
     procedures: NoHashHashMap<u64, LoadedProcedure>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum PrimitiveType {
     U8,
     U16,
@@ -155,7 +160,7 @@ impl TypeHeap {
                         self.parse_struct(*hash, manager.structure(*hash).unwrap(), manager);
                     let stru = &self.types[index];
                     let p_offset = offset;
-                    offset += stru.size();
+                    offset += size_of::<HeapObjectData>(); // pointer size for reference to that structure
                     fields.insert(
                         *field_name,
                         Field::Custom {
@@ -189,25 +194,38 @@ impl TypeHeap {
         return self.types.len() - 1;
     }
 
-    fn set(&self, target: &mut [u8], source: &[u8], field: &Field, s_offset: usize) {
+    pub fn set(&self, target: &mut [u8], source: Object, field: &Field) {
         match field {
-            Field::Custom { index, offset } => match &self.types[*index] {
-                Type::Structure(structure) => {
-                    for field in structure.fields.values() {
-                        self.set(target, source, field, *offset);
+            Field::Custom { index, offset } => match (&self.types[*index], source) {
+                (Type::Structure(..), Object::HeapObject(source)) => {
+                    let old = &target[*offset..(*offset + size_of::<HeapObjectData>())];
+                    if !old.iter().all(|&x| x == 0) {
+                        let old: HeapObjectData = unsafe {
+                            core::mem::transmute_copy(
+                                &<[u8; size_of::<HeapObjectData>()]>::try_from(old).unwrap(),
+                            )
+                        };
+                        drop(old);
                     }
+                    let data_bytes: [u8; size_of::<HeapObjectData>()] =
+                        unsafe { std::mem::transmute(source.inner) };
+                    target[*offset..(*offset + size_of::<HeapObjectData>())]
+                        .copy_from_slice(&data_bytes);
                 }
                 _ => unimplemented!(),
             },
             Field::Primitive { typ, offset } => {
-                let range = (*offset + s_offset)..(*offset + s_offset + typ.size());
-                target[range.clone()].copy_from_slice(&source[*offset..(*offset + typ.size())]);
+                let range = *offset..(*offset + typ.size());
+                let source = match source {
+                    Object::Primitive(primetive) => primetive,
+                    Object::HeapObject(..) => panic!("cannot set heap object to primetive"),
+                };
+
+                let mut buf = Vec::new();
+                source.to_bytes(&mut buf);
+                target[range.clone()].copy_from_slice(&buf);
             }
         }
-    }
-
-    pub fn traverse_and_set(&self, field: &Field, source: &[u8], target: &mut [u8], offset: usize) {
-        self.set(target, source, field, offset);
     }
 
     pub fn index(&self, index: usize) -> &Type {

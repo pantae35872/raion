@@ -1,9 +1,12 @@
-use std::{mem, sync::Arc};
+use std::{any::Any, mem, sync::Arc};
 
-use type_heap::TYPE_HEAP;
+use common::memory::buffer_reader::BufferReader;
+use heap_object::HeapObjectData;
+use type_heap::{Field, PrimitiveType, TYPE_HEAP};
 
 use crate::section_manager::LoadedType;
 
+pub mod heap_object;
 pub mod type_heap;
 
 #[derive(Clone, Debug, Copy, PartialEq)]
@@ -28,8 +31,7 @@ pub enum Object {
 
 #[derive(Clone, Debug)]
 struct HeapObject {
-    data: Arc<[u8]>,
-    type_id: usize,
+    inner: HeapObjectData,
 }
 
 impl Primitive {
@@ -47,45 +49,70 @@ impl Primitive {
             Self::I64(value) => buffer.extend_from_slice(&value.to_le_bytes()),
         }
     }
+
+    fn from_type_and_buf(typ: &PrimitiveType, buf: &[u8]) -> Self {
+        match typ {
+            PrimitiveType::U8 => Self::U8(BufferReader::new(buf).read_u8().unwrap()),
+            PrimitiveType::U16 => Self::U16(BufferReader::new(buf).read_u16().unwrap()),
+            PrimitiveType::U32 => Self::U32(BufferReader::new(buf).read_u32().unwrap()),
+            PrimitiveType::U64 => Self::U64(BufferReader::new(buf).read_u64().unwrap()),
+            PrimitiveType::I64 => Self::I64(BufferReader::new(buf).read_i64().unwrap()),
+            PrimitiveType::I32 => Self::I32(BufferReader::new(buf).read_i32().unwrap()),
+            PrimitiveType::I16 => Self::I16(BufferReader::new(buf).read_i16().unwrap()),
+            PrimitiveType::I8 => Self::I8(BufferReader::new(buf).read_i8().unwrap()),
+            PrimitiveType::Bool => Self::Bool(BufferReader::new(buf).read_u8().unwrap() == 1),
+            PrimitiveType::Void => Self::Void,
+        }
+    }
 }
 
 impl HeapObject {
-    pub fn set_field(&self, field: Option<u64>, other: Object) {
+    pub fn set_field(&mut self, field: Option<u64>, other: Object) {
         if let Some(field) = field {
-            let target = unsafe {
-                std::slice::from_raw_parts_mut(self.data.as_ptr() as *mut u8, self.data.len())
-            };
-            let type_heap = TYPE_HEAP.lock().unwrap();
-            let structure = match type_heap.index(self.type_id) {
+            let type_heap = TYPE_HEAP.read().unwrap();
+            let structure = match type_heap.index(self.inner.type_id()) {
                 type_heap::Type::Structure(structure) => structure,
                 type_heap::Type::Interface(..) => panic!("interface can't have fields"),
             };
-            match other {
-                Object::HeapObject(object) => {
-                    type_heap.traverse_and_set(structure.field(field), &object.data, target, 0);
-                }
-                Object::Primitive(primetive) => {
-                    let mut buf = Vec::new();
-                    primetive.to_bytes(&mut buf);
-                    let (old_offset, new_field) = structure.field(field).replace_offset(0);
-                    type_heap.traverse_and_set(&new_field, &mut buf, target, old_offset);
+            let target = unsafe { self.inner.data_mut() };
+            type_heap.set(target, other, structure.field(field));
+        } else {
+            let other = match other {
+                Object::HeapObject(other) => other,
+                Object::Primitive(..) => panic!("Cannot set primetives to heap object"),
+            };
+            self.inner = other.inner.clone();
+        }
+    }
+
+    pub fn get_field(&self, field: u64) -> Object {
+        let type_heap = TYPE_HEAP.read().unwrap();
+        let structure = match type_heap.index(self.inner.type_id()) {
+            type_heap::Type::Structure(structure) => structure,
+            type_heap::Type::Interface(..) => panic!("interface can't have fields"),
+        };
+        let data = self.inner.data();
+        match structure.field(field) {
+            Field::Custom { offset, .. } => {
+                let data = &data[*offset..(*offset + size_of::<HeapObjectData>())];
+                if !data.iter().all(|&x| x == 0) {
+                    let data: HeapObjectData = unsafe {
+                        core::mem::transmute_copy(
+                            &<[u8; size_of::<HeapObjectData>()]>::try_from(data).unwrap(),
+                        )
+                    };
+                    unsafe {
+                        data.increase_ref_count();
+                    }
+                    Object::HeapObject(HeapObject { inner: data })
+                } else {
+                    panic!("Null pointer exception (java reference)");
                 }
             }
-        } else {
-            let target = unsafe {
-                std::slice::from_raw_parts_mut(self.data.as_ptr() as *mut u8, self.data.len())
-            };
-            let type_heap = TYPE_HEAP.lock().unwrap();
-            let structure = match type_heap.index(self.type_id) {
-                type_heap::Type::Structure(structure) => structure,
-                type_heap::Type::Interface(..) => panic!("interface can't have fields"),
-            };
-            structure.field_iter().for_each(|f| match &other {
-                Object::HeapObject(object) => {
-                    type_heap.traverse_and_set(f, &object.data, target, 0);
-                }
-                Object::Primitive(..) => unreachable!("This method can only be called on heaped object and setting a primetive to a heap object with no field is consider and invalid"),
-            });
+            Field::Primitive { typ, offset } => Object::Primitive(Primitive::from_type_and_buf(
+                typ,
+                &data[*offset..(*offset + typ.size())],
+            )),
         }
     }
 }
@@ -104,11 +131,11 @@ impl Object {
             LoadedType::Void => Self::Primitive(Primitive::Void),
             LoadedType::Bool => Self::Primitive(Primitive::Bool(false)),
             LoadedType::Custom { hash } => {
-                let type_heap = TYPE_HEAP.lock().unwrap();
+                let type_heap = TYPE_HEAP.read().unwrap();
                 let type_id = type_heap.from_hash(hash).unwrap();
+                drop(type_heap); // Prevents dead lock
                 Self::HeapObject(HeapObject {
-                    type_id,
-                    data: Arc::from(vec![0; type_heap.index(type_id).size()]),
+                    inner: HeapObjectData::new(type_id),
                 })
             }
         }
@@ -126,6 +153,13 @@ impl Object {
                 *primtive = prim;
             }
         };
+    }
+
+    pub fn get(&mut self, field: u64) -> Object {
+        match self {
+            Self::Primitive(_) => panic!("primetives object can't have fields"),
+            Self::HeapObject(object) => object.get_field(field),
+        }
     }
 
     /// Set a field of this object

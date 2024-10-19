@@ -41,6 +41,9 @@ fn command_run(_command_name: &str, args: &mut env::Args) -> Result<(), String> 
     //new_object.set_primtive(Primitive::U32(30));
     //object.set(Some(const_xxh3::xxh3_64(b"bbb")), new_object.clone());
     println!("{:?}, {:?}, {:?}", object, object2, new_object);
+    //let self_ref = Object::new(LoadedType::from_hash(const_xxh3::xxh3_64(b"SelfRef")));
+    //println!("{:?}", self_ref);
+    //println!("Not recursive");
     //let entry = if let Some(entry) = executor.section_manager().get_section("start") {
     //    if entry.section_type() != SectionType::Procedure {
     //        return Err("entry point is not a procedure".to_string());

@@ -30,6 +30,37 @@ impl<'a> BufferReader<'a> {
             Err(_) => return None,
         }));
     }
+    pub fn read_i32(&mut self) -> Option<i32> {
+        let i32_bytes = match self.read_bytes(4) {
+            Some(bytes) => bytes,
+            None => return None,
+        };
+        return Some(i32::from_le_bytes(match <[u8; 4]>::try_from(i32_bytes) {
+            Ok(bytes) => bytes,
+            Err(_) => return None,
+        }));
+    }
+    pub fn read_i16(&mut self) -> Option<i16> {
+        let i16_bytes = match self.read_bytes(2) {
+            Some(bytes) => bytes,
+            None => return None,
+        };
+        return Some(i16::from_le_bytes(match <[u8; 2]>::try_from(i16_bytes) {
+            Ok(bytes) => bytes,
+            Err(_) => return None,
+        }));
+    }
+
+    pub fn read_i8(&mut self) -> Option<i8> {
+        let i8_bytes = match self.read_bytes(1) {
+            Some(bytes) => bytes,
+            None => return None,
+        };
+        return Some(i8::from_le_bytes(match <[u8; 1]>::try_from(i8_bytes) {
+            Ok(bytes) => bytes,
+            Err(_) => return None,
+        }));
+    }
 
     pub fn read_u64(&mut self) -> Option<u64> {
         let u64_bytes = match self.read_bytes(8) {
@@ -41,6 +72,7 @@ impl<'a> BufferReader<'a> {
             Err(_) => return None,
         }));
     }
+
     pub fn read_u32(&mut self) -> Option<u32> {
         let bytes = match self.read_bytes(4) {
             Some(bytes) => bytes,
@@ -51,6 +83,7 @@ impl<'a> BufferReader<'a> {
             Err(_) => return None,
         }));
     }
+
     pub fn read_u16(&mut self) -> Option<u16> {
         let bytes = match self.read_bytes(2) {
             Some(bytes) => bytes,
@@ -63,11 +96,11 @@ impl<'a> BufferReader<'a> {
     }
 
     pub fn read_u8(&mut self) -> Option<u8> {
-        let u64_bytes = match self.read_bytes(1) {
+        let u8_bytes = match self.read_bytes(1) {
             Some(bytes) => bytes,
             None => return None,
         };
-        return Some(u8::from_le_bytes(match <[u8; 1]>::try_from(u64_bytes) {
+        return Some(u8::from_le_bytes(match <[u8; 1]>::try_from(u8_bytes) {
             Ok(bytes) => bytes,
             Err(_) => return None,
         }));

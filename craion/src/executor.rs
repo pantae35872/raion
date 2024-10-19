@@ -91,7 +91,7 @@ impl Executor {
     }
 
     pub fn init(&mut self) {
-        TYPE_HEAP.lock().unwrap().init(&self.section_manager);
+        TYPE_HEAP.write().unwrap().init(&self.section_manager);
     }
 
     pub fn memory(&mut self) -> &mut Memory {
