@@ -38,6 +38,10 @@ fn command_run(_command_name: &str, args: &mut env::Args) -> Result<(), String> 
     object2.set(Some(const_xxh3::xxh3_64(b"test2")), new_object.clone());
     object.set(Some(const_xxh3::xxh3_64(b"cona")), object2.clone());
     object.set(Some(const_xxh3::xxh3_64(b"cona2")), object2.clone());
+    new_object.set_primtive(Primitive::U32(70));
+    object
+        .get(const_xxh3::xxh3_64(b"cona"))
+        .set(Some(const_xxh3::xxh3_64(b"test1")), new_object.clone());
     //new_object.set_primtive(Primitive::U32(30));
     //object.set(Some(const_xxh3::xxh3_64(b"bbb")), new_object.clone());
     println!("{:?}, {:?}, {:?}", object, object2, new_object);

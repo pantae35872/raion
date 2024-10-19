@@ -45,12 +45,12 @@ struct <dev/main/Test> -> [
   @Return(<dev/main/Test>)
   proc <new> -> {
     local 3 // Initialize the local size 3
-    itylal 0 // Initialize type and load from arg stack into local 0 
-    itylal 1 // Initialize type and load from arg stack into local 1
-    ityl 2, <dev/main/Test> // Initialize type into local 2
-    ftyll 2, <aaa>, 1 // Field Type load local (load local into field of the local type)
-    ftyll 2, <bbb>, 0 // Field Type load local (local 1 to field bbb on local 2)
-    rl 2 // Return local 2
+    argll 0 // Initialize type and load from arg stack into local 0 
+    argll 1 // Initialize type and load from arg stack into local 1
+    ls 2, <dev/main/Test> // Local set into local 2
+    fieldll 2, <aaa>, 1 // Field Type load local (load local into field of the local type)
+    fieldll 2, <bbb>, 0 // Field Type load local (local 1 to field bbb on local 2)
+    retl 2 // Return local 2
   }
 
   @Overwrite(<dev/main/Test2>)
@@ -68,7 +68,7 @@ struct <dev/main/Test> -> [
     callsp <main> // Main
     callsv <dev/main/Test>, <dev/main/Test2>, <getn> // Call a static virtual in a type 
     callv 0, <dev/main/Test2>, <getn>// Call virtual in an object
-    ros // Return operand stack
+    rets // Return operand stack
   }
 
   @Overwrite(<dev/main/Test2>)

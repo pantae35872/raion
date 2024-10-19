@@ -19,12 +19,18 @@ pub struct HeapObjectData {
 }
 
 impl HeapObjectData {
+    fn layout(size: usize) -> Layout {
+        let layout_atomic = Layout::new::<AtomicUsize>();
+        let layout_data = Layout::array::<u8>(size).unwrap();
+        let layout_dst = layout_atomic.extend(layout_data).unwrap().0;
+
+        layout_dst.pad_to_align()
+    }
+
     pub fn new(type_id: usize) -> Self {
         let data_size = TYPE_HEAP.read().unwrap().index(type_id).size();
         let inner = Global
-            .allocate_zeroed(
-                Layout::from_size_align(size_of::<AtomicUsize>() + data_size, 8).unwrap(),
-            )
+            .allocate_zeroed(Self::layout(data_size))
             .unwrap()
             .as_ptr() as *mut HeapObjectDataInner;
         // Create a dummy pointer that have a metadata of size data_size
