@@ -17,7 +17,14 @@ impl ReturnStack {
     }
 
     pub fn ret(&mut self, state: &mut ProgramState) {
+        state.ip = match self.data.pop() {
+            Some(ip) => ip,
+            None => {
+                // No more to return means the main proc returns
+                state.halt = true;
+                return;
+            }
+        };
         state.local.restore_local();
-        state.ip = self.data.pop().expect("Return Stack underflow");
     }
 }

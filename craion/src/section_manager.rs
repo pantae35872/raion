@@ -40,7 +40,7 @@ pub struct LoadedVProcs {
 
 #[derive(Debug, Clone)]
 pub struct LoadedProcedure {
-    mem_start: Address,
+    pub mem_start: Address,
     mem_size: u64,
     is_static: bool,
     return_type: LoadedType,
@@ -116,6 +116,7 @@ impl SectionManager {
             }
         }
         let data = &data[proc.start as usize..proc.start as usize + proc.size as usize];
+        let before_write_pos = self.write_pos;
         memory
             .mem_sets(self.write_pos, data)
             .expect("Not enough memory to load the section");
@@ -123,7 +124,7 @@ impl SectionManager {
 
         (
             LoadedProcedure {
-                mem_start: self.write_pos,
+                mem_start: before_write_pos,
                 mem_size: data.len() as u64,
                 return_type,
                 accept,
@@ -260,21 +261,10 @@ impl SectionManager {
                     .insert(interface.hash_name, LoadedInterface { vprocs, visibility });
             }
         }
-        //let data = &data[section.start() as usize..section.end() as usize];
-        //memory
-        //    .mem_sets(self.write_pos, data)
-        //    .expect("Not enough memory to load the section");
-        //self.set_section_hash(
-        //    section.hash(),
-        //    LoadedSection {
-        //        ty: section.section_type(),
-        //        mem_start: self.write_pos,
-        //        mem_end: self.write_pos + data.len() - 1,
-        //    },
-        //);
+    }
 
-        //self.write_pos += data.len();
-        //return self.get_section_hash(section.hash()).unwrap();
+    pub fn static_procedure_iter(&self) -> hash_map::Iter<'_, u64, LoadedProcedure> {
+        self.procedures.iter()
     }
 
     pub fn structure_iter(&self) -> hash_map::Iter<'_, u64, LoadedStructure> {

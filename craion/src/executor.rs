@@ -1,14 +1,16 @@
 use argument_stack::ArgumentStack;
-use common::sin::sections::SinSection;
+use common::{no_hash_hashmap::NoHashHashMap, sin::sections::SinSection};
 use local_variables::LocalVariables;
-use objects::{type_heap::TYPE_HEAP, Object};
+use objects::{type_heap::TYPE_HEAP, Object, Primitive};
 use operand_stack::OperandStack;
 use return_stack::ReturnStack;
+use xxhash_rust::const_xxh3;
 
 use crate::{
     decoder::decode,
     memory::{address::Address, argument_memory::ArgumentMemory, Memory},
-    section_manager::{LoadedType, SectionManager},
+    procedure_container::ProcedureContainer,
+    section_manager::{LoadedProcedure, LoadedType, SectionManager},
 };
 
 pub mod argument_stack;
@@ -31,6 +33,7 @@ pub struct ExecutorState {
     pub argument_stack: ArgumentStack,
     pub operand_stack: OperandStack,
     pub program_state: ProgramState,
+    pub static_procedure: ProcedureContainer,
     pub exit_code: u64,
 }
 
@@ -64,6 +67,7 @@ impl ExecutorState {
             operand_stack: OperandStack::new(),
             program_state: ProgramState::new(),
             exit_code: 0,
+            static_procedure: ProcedureContainer::new(),
         }
     }
 }
@@ -89,6 +93,12 @@ impl Executor {
 
     pub fn init(&mut self) {
         TYPE_HEAP.write().unwrap().init(&self.section_manager);
+        for (key, value) in self.section_manager.static_procedure_iter() {
+            self.state.static_procedure.load(*key, value.clone());
+        }
+        self.state
+            .static_procedure
+            .call(const_xxh3::xxh3_64(b"main"), &mut self.state.program_state);
     }
 
     pub fn execute(&mut self) {
@@ -120,6 +130,10 @@ impl Executor {
                 };
             }
         }
+        self.state.exit_code = match self.state.program_state.return_value {
+            Object::Primitive(Primitive::U64(exit_code)) => exit_code,
+            _ => 0,
+        };
         println!("Program exit with exit code {}", self.state.exit_code);
     }
 }

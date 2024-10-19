@@ -8,4 +8,5 @@ pub mod executor;
 pub mod instruction;
 pub mod instruction_helper;
 pub mod memory;
+pub mod procedure_container;
 pub mod section_manager;

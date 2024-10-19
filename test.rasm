@@ -116,7 +116,7 @@
 @Public
 @Static
 @Return(<u64>)
-proc <dev/main/main> -> {
+proc <main> -> {
   local 1u16
   pushu64 15u64 // Push 15 to opstack
   loados 0u16 // Load opstack into local index 0 

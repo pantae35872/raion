@@ -15,7 +15,7 @@ use xxhash_rust::const_xxh3;
 extern crate test;
 
 fn command_run(_command_name: &str, args: &mut env::Args) -> Result<(), String> {
-    let mut executor = Executor::new(0xFFFFF);
+    let mut executor = Executor::new(0xFF);
     let file = args.next().ok_or("no sin file is provided".to_string())?;
     let mut sin = File::open(&file).map_err(|e| format!("couldn't read {file}: {e}"))?;
     let mut buf = Vec::new();
