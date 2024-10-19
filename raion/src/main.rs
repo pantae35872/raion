@@ -14,7 +14,6 @@ use raion::{
     compiler::{asm_compiler::ASMCompiler, rin_compiler::Path as RinPath},
     lexer::asm_lexer::ASMLexer,
     manager::{CompilerManager, SingleUseCompiler},
-    WithLocation,
 };
 use toml::Value;
 
@@ -80,8 +79,6 @@ fn command_compile_rasm(_command_name: &str, args: &mut env::Args) -> Result<(),
         .to_str()
         .ok_or(format!("file name is not valid utf8"))?;
     let output = source_path.with_extension("sin");
-    let output_asm = source_path.with_extension("asm");
-    let module_path = RinPath::new(package_name);
     let mut file = File::open(source_path)
         .map_err(|e| format!("couldn't read {}: {e}", source_path.display()))?;
     let mut buffer = String::new();

@@ -1,74 +1,79 @@
-use std::collections::HashMap;
-
+use argument_stack::ArgumentStack;
 use common::sin::sections::SinSection;
-use objects::type_heap::TYPE_HEAP;
+use local_variables::LocalVariables;
+use objects::{type_heap::TYPE_HEAP, Object};
+use operand_stack::OperandStack;
+use return_stack::ReturnStack;
 
 use crate::{
     decoder::decode,
-    memory::{argument_memory::ArgumentMemory, Memory},
-    ret_stack::RetStack,
-    section_manager::SectionManager,
+    memory::{address::Address, argument_memory::ArgumentMemory, Memory},
+    section_manager::{LoadedType, SectionManager},
 };
 
-use self::registers::RegisterFile;
-
+pub mod argument_stack;
+pub mod local_variables;
 pub mod objects;
-pub mod registers;
+pub mod operand_stack;
+pub mod return_stack;
+
+#[derive(Debug)]
+pub struct ProgramState {
+    pub ip: Address,
+    pub halt: bool,
+    pub local: LocalVariables,
+    pub return_value: Object,
+}
 
 #[derive(Debug)]
 pub struct ExecutorState {
-    stack_saved_size: Vec<u64>,
-    procedure_arguments: HashMap<u32, u64>,
-    exit_code: u64,
+    pub return_stack: ReturnStack,
+    pub argument_stack: ArgumentStack,
+    pub operand_stack: OperandStack,
+    pub program_state: ProgramState,
+    pub exit_code: u64,
 }
 
 pub struct Executor {
-    memory: Memory,
-    register: RegisterFile,
-    argument_memory: ArgumentMemory,
-    ret_stack: RetStack,
+    program_memory: Memory,
     section_manager: SectionManager,
+    argument_memory: ArgumentMemory,
     state: ExecutorState,
+}
+
+impl ProgramState {
+    pub fn new() -> Self {
+        Self {
+            ip: Address::new(0),
+            halt: false,
+            local: LocalVariables::new(),
+            return_value: Object::new(LoadedType::Void),
+        }
+    }
+
+    pub fn inc_ip(&mut self, amount: usize) {
+        self.ip += amount
+    }
 }
 
 impl ExecutorState {
     pub fn new() -> Self {
         Self {
-            stack_saved_size: Vec::new(),
-            procedure_arguments: HashMap::new(),
+            return_stack: ReturnStack::new(),
+            argument_stack: ArgumentStack::new(),
+            operand_stack: OperandStack::new(),
+            program_state: ProgramState::new(),
             exit_code: 0,
         }
-    }
-
-    pub fn save_stack_size(&mut self, size: u64) {
-        self.stack_saved_size.push(size);
-    }
-
-    pub fn consume_stack_size(&mut self) -> u64 {
-        return self.stack_saved_size.pop().unwrap_or(0);
-    }
-
-    pub fn load_argument(&mut self, index: u32, value: u64) {
-        self.procedure_arguments.insert(index, value);
-    }
-
-    pub fn get_argument(&self, index: u32) -> u64 {
-        return *self.procedure_arguments.get(&index).unwrap_or(&0);
-    }
-
-    pub fn set_exit_code(&mut self, value: u64) {
-        self.exit_code = value;
     }
 }
 
 impl Executor {
     pub fn new(mem_size: usize) -> Self {
         Self {
-            memory: Memory::new(mem_size),
-            register: RegisterFile::new(),
-            argument_memory: ArgumentMemory::new(),
-            ret_stack: RetStack::new(),
+            program_memory: Memory::new(mem_size),
             section_manager: SectionManager::new(),
+            argument_memory: ArgumentMemory::new(),
             state: ExecutorState::new(),
         }
     }
@@ -77,41 +82,22 @@ impl Executor {
         return &mut self.section_manager;
     }
 
-    pub fn registers(&mut self) -> &mut RegisterFile {
-        return &mut self.register;
-    }
-
-    pub fn registers_ref(&self) -> &RegisterFile {
-        return &self.register;
-    }
-
     pub fn load_section(&mut self, section: &SinSection, data: &[u8]) {
         self.section_manager
-            .load_section(section, data, &mut self.memory);
+            .load_section(section, data, &mut self.program_memory);
     }
 
     pub fn init(&mut self) {
         TYPE_HEAP.write().unwrap().init(&self.section_manager);
     }
 
-    pub fn memory(&mut self) -> &mut Memory {
-        return &mut self.memory;
-    }
-
-    pub fn memory_ref(&self) -> &Memory {
-        return &self.memory;
-    }
-
     pub fn execute(&mut self) {
-        while !self.register.get_halt() {
+        while !self.state.program_state.halt {
             {
                 let mut instruction = match decode(
-                    &mut self.memory,
-                    &mut self.register,
-                    &mut self.argument_memory,
-                    &mut self.ret_stack,
-                    &mut self.section_manager,
                     &mut self.state,
+                    &mut self.argument_memory,
+                    &self.program_memory,
                 ) {
                     Ok(result) => result,
                     Err(e) => {
@@ -127,7 +113,7 @@ impl Executor {
                             "Error occur while executing instruction: '{}', opcode: {}, instruction pointer: {}",
                             e,
                             instruction.op_code(),
-                            self.register.get_ip()
+                            self.state.program_state.ip
                         );
                         return;
                     }
@@ -135,9 +121,5 @@ impl Executor {
             }
         }
         println!("Program exit with exit code {}", self.state.exit_code);
-    }
-
-    pub fn debug_register(&self) {
-        println!("{:?}", self.register);
     }
 }

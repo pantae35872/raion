@@ -3,17 +3,13 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use common::{
-    memory::buffer_reader::BufferReader,
-    register::{RegisterParseError, RegisterType},
-};
+use common::memory::buffer_reader::BufferReader;
 
 use crate::memory::address::Address;
 
 #[derive(Debug)]
 pub enum ArgumentParseError {
     OutOfRange(usize),
-    RegisterParseError(RegisterParseError),
 }
 
 impl Display for ArgumentParseError {
@@ -22,14 +18,7 @@ impl Display for ArgumentParseError {
             Self::OutOfRange(readpos) => {
                 write!(f, "Not enough argument. with readpos: {}", readpos)
             }
-            Self::RegisterParseError(parse_error) => write!(f, "{}", parse_error),
         }
-    }
-}
-
-impl From<RegisterParseError> for ArgumentParseError {
-    fn from(value: RegisterParseError) -> Self {
-        Self::RegisterParseError(value)
     }
 }
 
@@ -45,14 +34,6 @@ impl<'a> Argument<'a> {
         Self {
             reader: BufferReader::new(data),
         }
-    }
-
-    pub fn parse_register(&mut self) -> Result<RegisterType, ArgumentParseError> {
-        let byte_read = match self.reader.read_bytes(1) {
-            Some(byte) => byte,
-            None => return Err(ArgumentParseError::OutOfRange(self.reader.get_read_pos())),
-        };
-        return Ok(RegisterType::from_byte(byte_read[0])?);
     }
 
     pub fn parse_u64(&mut self) -> Result<u64, ArgumentParseError> {

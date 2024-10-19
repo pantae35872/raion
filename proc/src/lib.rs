@@ -71,13 +71,9 @@ pub fn collect_instruction(args: TokenStream) -> TokenStream {
     let instruction = INSTRUCTIONS.lock().unwrap();
     let input = parse_macro_input!(args as VariableArgs);
     let op_code_var = input.identifiers.get(0).expect("Invalid argument");
-    let register_var = input.identifiers.get(1).expect("Invalid argument");
-    let memory_var = input.identifiers.get(2).expect("Invalid argument");
-    let argument_var = input.identifiers.get(3).expect("Invalid argument");
-    let instruction_length_var = input.identifiers.get(4).expect("Invalid argument");
-    let ret_stack_var = input.identifiers.get(5).expect("Invalid argument");
-    let section_manager_var = input.identifiers.get(6).expect("Invalid argument");
-    let executor_state_var = input.identifiers.get(7).expect("Invalid argument");
+    let argument_var = input.identifiers.get(1).expect("Invalid argument");
+    let executor_state_var = input.identifiers.get(2).expect("Invalid argument");
+    let instruction_length_var = input.identifiers.get(3).expect("Invalid argument");
     let decode_logic = instruction
         .iter()
         .map(|instruction| {
@@ -88,15 +84,9 @@ pub fn collect_instruction(args: TokenStream) -> TokenStream {
                 common::constants::#opcode_ts => {
                     return Ok(Self {
                         instruction_executor: #instruction_ts,
-                        instruction_argument: InstructionArgument {
-                            register: #register_var,
-                            memory: #memory_var,
-                            argument: #argument_var,
-                            instruction_length: #instruction_length_var,
-                            ret_stack: #ret_stack_var,
-                            section_manager: #section_manager_var,
-                            executor_state: #executor_state_var
-                        },
+                        argument: #argument_var,
+                        instruction_length: #instruction_length_var,
+                        state: #executor_state_var,
                         opcode: #op_code_var,
                     })
                 },

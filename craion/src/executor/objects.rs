@@ -1,4 +1,4 @@
-use std::{any::Any, mem, sync::Arc};
+use std::mem;
 
 use common::memory::buffer_reader::BufferReader;
 use heap_object::HeapObjectData;
@@ -30,7 +30,7 @@ pub enum Object {
 }
 
 #[derive(Clone, Debug)]
-struct HeapObject {
+pub struct HeapObject {
     inner: HeapObjectData,
 }
 

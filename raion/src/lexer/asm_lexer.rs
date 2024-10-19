@@ -1,9 +1,7 @@
 use std::{path::Path, str::FromStr, sync::Arc};
 
-use common::register::RegisterType;
-
 use crate::{
-    token::asm_token::{ASMKeyword, ASMToken, AttributeToken, InstructionType},
+    token::asm_token::{ASMKeyword, ASMToken, AttributeToken, InstructionType, IntergerType},
     WithLocation,
 };
 
@@ -43,6 +41,12 @@ impl<'a> ASMLexer<'a> {
 
                 if let Ok(instruction_type) = InstructionType::from_str(&buffer) {
                     self.base.push(ASMToken::Instruction(instruction_type));
+                    buffer.clear();
+                    continue;
+                }
+
+                if let Ok(interger_type) = IntergerType::from_str(&buffer) {
+                    self.base.push(ASMToken::IntergerType(interger_type));
                     buffer.clear();
                     continue;
                 }

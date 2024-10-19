@@ -1,7 +1,4 @@
-use std::{
-    collections::hash_map::Values,
-    sync::{Arc, Mutex, RwLock},
-};
+use std::{collections::hash_map::Values, sync::RwLock};
 
 use common::no_hash_hashmap::NoHashHashMap;
 use lazy_static::lazy_static;
@@ -158,7 +155,6 @@ impl TypeHeap {
                 LoadedType::Custom { hash } => {
                     let index =
                         self.parse_struct(*hash, manager.structure(*hash).unwrap(), manager);
-                    let stru = &self.types[index];
                     let p_offset = offset;
                     offset += size_of::<HeapObjectData>(); // pointer size for reference to that structure
                     fields.insert(

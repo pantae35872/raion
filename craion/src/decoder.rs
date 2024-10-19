@@ -1,15 +1,13 @@
 use std::{error::Error, fmt::Display};
 
-use instruction::Instruction;
-
 use crate::{
-    executor::{registers::RegisterFile, ExecutorState},
-    memory::{address::Address, argument_memory::ArgumentMemory, Memory, MemoryError}, ret_stack::RetStack, section_manager::SectionManager,
+    instruction::Instruction,
+    executor::ExecutorState,
+    memory::{address::Address, argument_memory::ArgumentMemory, Memory, MemoryError}
 };
 
 use self::argument::Argument;
 
-pub mod instruction;
 pub mod argument;
 
 #[derive(Debug)]
@@ -33,16 +31,15 @@ impl Display for DecoderError {
 impl Error for DecoderError {}
 
 
-pub fn decode<'a>(memory: &'a mut Memory, register: &'a mut RegisterFile, argument_memory: &'a mut ArgumentMemory, ret_stack: &'a mut RetStack, 
-    section_manager: &'a mut SectionManager, executor_state: &'a mut ExecutorState) -> Result<Instruction<'a>, DecoderError> {
-    let instruction_length = match memory.mem_get(register.get_ip()) {
+pub fn decode<'a>(state: &'a mut ExecutorState, argument_memory: &'a mut ArgumentMemory, program_memory: &Memory) -> Result<Instruction<'a>, DecoderError> {
+    let instruction_length = match program_memory.mem_get(state.program_state.ip) {
         Ok(il) => il as usize,
         Err(err) => match err {
             MemoryError::InvalidAddr(address) => return Err(DecoderError::InvalidIp(address)),
             MemoryError::OutOfRange(address, _) => return Err(DecoderError::InvalidIp(address))
         },
     };
-    let instruction = match memory.mem_gets(register.get_ip(), instruction_length) {
+    let instruction = match program_memory.mem_gets(state.program_state.ip, instruction_length) {
         Ok(is) => is,
         Err(err) => match err {
             MemoryError::InvalidAddr(address) => return Err(DecoderError::InvalidIl(address, instruction_length)),
@@ -51,10 +48,10 @@ pub fn decode<'a>(memory: &'a mut Memory, register: &'a mut RegisterFile, argume
         },
     };
     if instruction_length < 3 {
-        return Err(DecoderError::InvalidIl(register.get_ip(), instruction_length)); 
+        return Err(DecoderError::InvalidIl(state.program_state.ip, instruction_length)); 
     }
     let opcode = u16::from_le_bytes([instruction[1], instruction[2]]);
     let argument = &instruction[3..instruction_length];
     argument_memory.set_arguement(argument);
-    return Ok(Instruction::decode(opcode, register, memory, Argument::new(argument_memory.get_argument()), ret_stack, section_manager, executor_state,instruction_length)?);
+    return Ok(Instruction::decode(opcode, Argument::new(argument_memory.get_argument()), state, instruction_length)?);
 }

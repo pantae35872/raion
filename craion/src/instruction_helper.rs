@@ -1,4 +1,4 @@
-use common::{constants::HALT_OPCODE, register::RegisterType};
+use common::constants::HALT_OPCODE;
 
 use crate::memory::{address::Address, Memory};
 
@@ -20,11 +20,6 @@ impl<'a> InstructionEncoder<'a> {
             instruction_helper,
             args: Vec::new(),
         }
-    }
-
-    pub fn encode_register(mut self, register: RegisterType) -> Self {
-        self.args.push(register.to_byte());
-        self
     }
 
     pub fn encode_sub_opcode(mut self, opcode: u8) -> Self {

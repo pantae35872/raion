@@ -1,5 +1,11 @@
 use xxhash_rust::const_xxh3;
 
+pub const LOCAL_OPCODE: u16 = 19;
+pub const RETL_OPCODE: u16 = 20;
+pub const PUSHU64_OPCODE: u16 = 21;
+pub const LOADOS_OPCODE: u16 = 22;
+
+// Deprecated remove later
 //Memory releate instructions
 pub const MOV_OPCODE: u16 = 16;
 pub const PUSH_OPCODE: u16 = 17;

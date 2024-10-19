@@ -1,130 +1,124 @@
-@Public
-interface <dev/main/Test2> -> [
-  @Static
-  @Accept(<u32>)
-  @Return(<u32>)
-  vproc <getn>
-
-  @Return(<u32>)
-  vproc <ggg>
-]
-
-@Public
-struct <StTest2> -> [
-  @Contain(<u32>)
-  field <test2>
-
-  @Contain(<u32>)
-  field <test1>
-]
-
-@Public
-struct <StTest> -> [
-  @Contain(<u32>)
-  field <ee>
-
-  @Contain(<StTest2>)
-  field <cona>
-
-  @Contain(<StTest2>)
-  field <cona2>
-]
-
-@Public
-@Implemented(<dev/main/Test2>)
-struct <dev/main/Test> -> [
-  @Contain(<u32>)
-  field <bbb>
-
-  @Contain(<u32>)
-  field <aaa>
-
-  @Public
-  @Static
-  @Accept(<u32>, <u32>)
-  @Return(<dev/main/Test>)
-  proc <new> -> {
-    local 3 // Initialize the local size 3
-    argll 0 // Initialize type and load from arg stack into local 0 
-    argll 1 // Initialize type and load from arg stack into local 1
-    ls 2, <dev/main/Test> // Local set into local 2
-    fieldll 2, <aaa>, 1 // Field Type load local (load local into field of the local type)
-    fieldll 2, <bbb>, 0 // Field Type load local (local 1 to field bbb on local 2)
-    retl 2 // Return local 2
-  }
-
-  @Overwrite(<dev/main/Test2>)
-  @Static
-  @Accept(<u32>)
-  @Return(<u32>)
-  proc <getn> -> {
-    local 1u16
-    argll 0u16 // Arg load local 
-    pushl 0u16 // push load local to operand stack
-    pushu32 10u32 // push number operand stack
-    addu32 // Operand stack add 
-    callspt <dev/main/Test>, <new> // Call a static procedure in a type
-    callp 0, <mmm> // call normal procedure
-    callsp <main> // Main
-    callsv <dev/main/Test>, <dev/main/Test2>, <getn> // Call a static virtual in a type 
-    callv 0, <dev/main/Test2>, <getn>// Call virtual in an object
-    rets // Return operand stack
-  }
-
-  @Overwrite(<dev/main/Test2>)
-  @Return(<u32>)
-  proc <ggg> -> {
-    //pnos 10 
-    //ros
-  }
-
-  @Public
-  @Return(<void>)
-  proc <increase> -> {
-    ret
-  }
-
-  @Public
-  @Static
-  @Return(<u32>)
-  proc <another_static> -> {
-  }
-
-  @Public
-  @Static
-  @Accept(<u32>)
-  @Return(<u32>)
-  proc <aaa> -> {
-  }
-
-  @Public
-  @Static
-  @Accept(<dev/main/Test2>)
-  @Return(<u32>)
-  proc <dynamic> -> {
-  }
-
-  @Public
-  @Static
-  @Accept(<dev/main/Test2>)
-  @Return(<void>)
-  proc <static_dynamic> -> {
-  }
-]
+//@Public
+//interface <dev/main/Test2> -> [
+//  @Static
+//  @Accept(<u32>)
+//  @Return(<u32>)
+//  vproc <getn>
+//
+//  @Return(<u32>)
+//  vproc <ggg>
+//]
+//
+//@Public
+//struct <StTest2> -> [
+//  @Contain(<u32>)
+//  field <test2>
+//
+//  @Contain(<u32>)
+//  field <test1>
+//]
+//
+//@Public
+//struct <StTest> -> [
+//  @Contain(<u32>)
+//  field <ee>
+//
+//  @Contain(<StTest2>)
+//  field <cona>
+//
+//  @Contain(<StTest2>)
+//  field <cona2>
+//]
+//
+//@Public
+//@Implemented(<dev/main/Test2>)
+//struct <dev/main/Test> -> [
+//  @Contain(<u32>)
+//  field <bbb>
+//
+//  @Contain(<u32>)
+//  field <aaa>
+//
+//  @Public
+//  @Static
+//  @Accept(<u32>, <u32>)
+//  @Return(<dev/main/Test>)
+//  proc <new> -> {
+//    local 3u16 // Initialize the local size 3
+//    argll 0u16 // Initialize type and load from arg stack into local 0 
+//    argll 1u16 // Initialize type and load from arg stack into local 1
+//    ls 2u16, <dev/main/Test> // Local set into local 2
+//    fieldll 2u16, <aaa>, 1u16 // Field Type load local (load local into field of the local type)
+//    fieldll 2u16, <bbb>, 0u16 // Field Type load local (local 1 to field bbb on local 2)
+//    retl 2u16 // Return local 2
+//  }
+//
+//  @Overwrite(<dev/main/Test2>)
+//  @Static
+//  @Accept(<u32>)
+//  @Return(<u32>)
+//  proc <getn> -> {
+//    local 1u16
+//    argll 0u16 // Arg load local 
+//    pushl 0u16 // push load local to operand stack
+//    pushu32 10u32 // push number operand stack
+//    addu32 // Operand stack add 
+//    callspt <dev/main/Test>, <new> // Call a static procedure in a type
+//    callp 0, <mmm> // call normal procedure
+//    callsp <main> // Main // call static procedure
+//    callsv <dev/main/Test>, <dev/main/Test2>, <getn> // Call a static virtual in a type 
+//    callv 0, <dev/main/Test2>, <getn>// Call virtual in an object
+//    rets // Return operand stack
+//  }
+//
+//  @Overwrite(<dev/main/Test2>)
+//  @Return(<u32>)
+//  proc <ggg> -> {
+//    //pnos 10 
+//    //ros
+//  }
+//
+//  @Public
+//  @Return(<void>)
+//  proc <increase> -> {
+//    //ret
+//  }
+//
+//  @Public
+//  @Static
+//  @Return(<u32>)
+//  proc <another_static> -> {
+//  }
+//
+//  @Public
+//  @Static
+//  @Accept(<u32>)
+//  @Return(<u32>)
+//  proc <aaa> -> {
+//  }
+//
+//  @Public
+//  @Static
+//  @Accept(<dev/main/Test2>)
+//  @Return(<u32>)
+//  proc <dynamic> -> {
+//  }
+//
+//  @Public
+//  @Static
+//  @Accept(<dev/main/Test2>)
+//  @Return(<void>)
+//  proc <static_dynamic> -> {
+//  }
+//]
 
 
 @Public
 @Static
 @Return(<u64>)
 proc <dev/main/main> -> {
-  //ros
-}
-
-@Public
-@Static
-proc <start> -> {
-  //local 1
-  //calls <dev/main/main> // Call static 
-  //itylr 0 
-  //rl 0
+  local 1u16
+  pushu64 15u64 // Push 15 to opstack
+  loados 0u16 // Load opstack into local index 0 
+  retl 0u16
 }

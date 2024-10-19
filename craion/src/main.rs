@@ -27,28 +27,7 @@ fn command_run(_command_name: &str, args: &mut env::Args) -> Result<(), String> 
         executor.load_section(section, sin.data());
     }
     executor.init();
-    let mut object = Object::new(LoadedType::from_hash(const_xxh3::xxh3_64(b"StTest")));
-    let mut object2 = Object::new(LoadedType::from_hash(const_xxh3::xxh3_64(b"StTest2")));
-    let mut new_object = Object::new(LoadedType::U32);
-    new_object.set_primtive(Primitive::U32(20));
-    object.set(Some(const_xxh3::xxh3_64(b"ee")), new_object.clone());
-    new_object.set_primtive(Primitive::U32(50));
-    object2.set(Some(const_xxh3::xxh3_64(b"test1")), new_object.clone());
-    new_object.set_primtive(Primitive::U32(2));
-    object2.set(Some(const_xxh3::xxh3_64(b"test2")), new_object.clone());
-    object.set(Some(const_xxh3::xxh3_64(b"cona")), object2.clone());
-    object.set(Some(const_xxh3::xxh3_64(b"cona2")), object2.clone());
-    new_object.set_primtive(Primitive::U32(70));
-    object
-        .get(const_xxh3::xxh3_64(b"cona"))
-        .set(Some(const_xxh3::xxh3_64(b"test1")), new_object.clone());
-    //new_object.set_primtive(Primitive::U32(30));
-    //object.set(Some(const_xxh3::xxh3_64(b"bbb")), new_object.clone());
-    println!("{:?}, {:?}, {:?}", object, object2, new_object);
-    //let self_ref = Object::new(LoadedType::from_hash(const_xxh3::xxh3_64(b"SelfRef")));
-    //println!("{:?}", self_ref);
-    //println!("Not recursive");
-    //let entry = if let Some(entry) = executor.section_manager().get_section("start") {
+    //let entry = if let Some(entry) = executor.section_manager()("start") {
     //    if entry.section_type() != SectionType::Procedure {
     //        return Err("entry point is not a procedure".to_string());
     //    }
@@ -58,7 +37,7 @@ fn command_run(_command_name: &str, args: &mut env::Args) -> Result<(), String> 
     //};
     //executor.registers().set_ip(entry);
     //executor.registers().set_sp(Address::new(0xFFFE));
-    //executor.execute();
+    executor.execute();
     return Ok(());
 }
 

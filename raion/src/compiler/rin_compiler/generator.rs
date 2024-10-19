@@ -1,7 +1,7 @@
 use std::{collections::HashMap, error::Error, fmt::Display};
 
 use block_generator::{BlockGenerator, ReturnDestion};
-use common::register::RegisterType;
+use common::register::{RegisterType, RegisterTypeGroup};
 
 use crate::{error::ErrorGenerator, WithLocation};
 
